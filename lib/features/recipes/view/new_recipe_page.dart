@@ -1,4 +1,4 @@
-import 'package:appli_recette/core/router/app_router.dart';
+import 'package:appli_recette/features/household/household.dart';
 import 'package:appli_recette/features/recipes/presentation/providers/recipes_provider.dart';
 import 'package:appli_recette/features/recipes/presentation/widgets/recipe_quick_form.dart';
 import 'package:flutter/material.dart';
@@ -21,7 +21,7 @@ class _NewRecipePageState extends ConsumerState<NewRecipePage> {
     setState(() => _isSaving = true);
     try {
       final notifier = ref.read(recipesNotifierProvider.notifier);
-      await notifier.createRecipe(
+      final newRecipeId = await notifier.createRecipe(
         name: data.name,
         mealType: data.mealType,
         prepTimeMinutes: data.prepTimeMinutes,
@@ -29,16 +29,42 @@ class _NewRecipePageState extends ConsumerState<NewRecipePage> {
         restTimeMinutes: data.restTimeMinutes,
       );
 
-      if (mounted) {
-        // Naviguer vers l'onglet Recettes après création
-        context.go(AppRoutes.recipes);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('« ${data.name} » ajoutée à ta collection !'),
-            backgroundColor: const Color(0xFF6BAE75),
-            duration: const Duration(seconds: 3),
+      if (!mounted) return;
+
+      // Attendre que le stream des membres soit résolu avant de décider
+      final membersAsync = ref.read(membersStreamProvider);
+      final members = membersAsync.hasValue
+          ? membersAsync.value!
+          : await ref
+                .read(householdRepositoryProvider)
+                .watchAll()
+                .first;
+
+      if (members.isNotEmpty) {
+        // Afficher le bottom sheet de notation immédiate (FR22)
+        await showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          builder: (ctx) => RatingAfterCreationSheet(
+            members: members,
+            recipeId: newRecipeId,
           ),
         );
+      }
+
+      // SnackBar de succès
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Recette créée avec succès !')),
+        );
+      }
+
+      // Naviguer vers la fiche recette (remplace le formulaire dans la stack)
+      if (mounted) {
+        context.go('/recipes/$newRecipeId');
       }
     } on Exception catch (e) {
       if (mounted) {

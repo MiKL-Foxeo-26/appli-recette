@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:appli_recette/core/theme/app_colors.dart';
 import 'package:appli_recette/core/utils/time_utils.dart';
+import 'package:appli_recette/features/household/household.dart';
 import 'package:appli_recette/features/recipes/presentation/providers/recipes_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -330,6 +331,9 @@ class RecipeDetailScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 24),
                       ],
+
+                      // ─── Préférences du foyer ───────────────────────────
+                      _PreferencesSection(recipeId: recipeId),
                     ],
                   ),
                 ),
@@ -485,5 +489,88 @@ class _TimeBlock extends StatelessWidget {
       ],
     );
   }
+}
 
+/// Section "Préférences du foyer" affichant les notations de chaque membre.
+class _PreferencesSection extends ConsumerWidget {
+  const _PreferencesSection({required this.recipeId});
+
+  final String recipeId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final membersAsync = ref.watch(membersStreamProvider);
+    final ratingsAsync = ref.watch(recipeRatingsProvider(recipeId));
+
+    return membersAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: Text(
+          'Impossible de charger les membres : $e',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.error,
+              ),
+        ),
+      ),
+      data: (members) {
+        if (members.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _SectionTitle('Préférences du foyer'),
+                const SizedBox(height: 8),
+                Text(
+                  'Ajoute des membres dans l\'onglet Foyer',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ratingsAsync.when(
+          loading: () => const SizedBox.shrink(),
+          error: (e, _) => Padding(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: Text(
+              'Impossible de charger les notations : $e',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.error,
+                  ),
+            ),
+          ),
+          data: (ratings) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _SectionTitle('Préférences du foyer'),
+                  const SizedBox(height: 8),
+                  ...members.map((member) {
+                    final memberRating = ratings
+                        .where((r) => r.memberId == member.id)
+                        .firstOrNull;
+                    final ratingValue = memberRating != null
+                        ? RatingValue.fromDb(memberRating.rating)
+                        : null;
+                    return MemberRatingRow(
+                      member: member,
+                      currentRating: ratingValue,
+                      recipeId: recipeId,
+                    );
+                  }),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 }

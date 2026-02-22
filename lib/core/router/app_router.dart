@@ -1,5 +1,7 @@
+import 'package:appli_recette/core/database/app_database.dart';
 import 'package:appli_recette/features/home/view/home_page.dart';
 import 'package:appli_recette/features/household/view/household_page.dart';
+import 'package:appli_recette/features/household/view/member_form_page.dart';
 import 'package:appli_recette/features/planning/view/planning_page.dart';
 import 'package:appli_recette/features/recipes/view/edit_recipe_screen.dart';
 import 'package:appli_recette/features/recipes/view/new_recipe_page.dart';
@@ -17,6 +19,13 @@ abstract class AppRoutes {
   static const newRecipe = '/recipes/new';
   static const recipeDetail = '/recipes/:id';
   static const recipeEdit = '/recipes/:id/edit';
+
+  // Household — membres
+  static const memberAdd = '/household/member/add';
+  static const memberEdit = '/household/member/:id/edit';
+
+  /// Génère le chemin d'édition pour un membre donné.
+  static String memberEditPath(String id) => '/household/member/$id/edit';
 }
 
 final appRouter = GoRouter(
@@ -85,6 +94,28 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final id = state.pathParameters['id']!;
         return EditRecipeScreen(recipeId: id);
+      },
+    ),
+
+    // ─── Routes membres du foyer ───────────────────────────────────────────
+
+    // Nouveau membre
+    GoRoute(
+      path: AppRoutes.memberAdd,
+      builder: (context, state) => const MemberFormPage(),
+    ),
+
+    // Édition d'un membre (le Member est passé via state.extra)
+    // Si state.extra est null (deep-link), redirige vers le foyer.
+    GoRoute(
+      path: AppRoutes.memberEdit,
+      redirect: (context, state) {
+        if (state.extra == null) return AppRoutes.household;
+        return null;
+      },
+      builder: (context, state) {
+        final member = state.extra! as Member;
+        return MemberFormPage(member: member);
       },
     ),
   ],
