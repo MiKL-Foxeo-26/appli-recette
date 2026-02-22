@@ -1,5 +1,6 @@
 import 'package:appli_recette/core/config/app_config.dart';
 import 'package:appli_recette/core/database/app_database.dart';
+import 'package:appli_recette/core/database/database_provider.dart';
 import 'package:appli_recette/core/router/app_router.dart';
 import 'package:appli_recette/core/theme/app_theme.dart';
 import 'package:appli_recette/l10n/l10n.dart';
@@ -19,6 +20,9 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ProviderScope(
+      overrides: [
+        databaseProvider.overrideWithValue(database),
+      ],
       child: MaterialApp.router(
         title: 'Appli Recette',
         theme: AppTheme.light,

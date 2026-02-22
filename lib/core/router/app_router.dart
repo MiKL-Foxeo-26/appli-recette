@@ -1,7 +1,9 @@
 import 'package:appli_recette/features/home/view/home_page.dart';
 import 'package:appli_recette/features/household/view/household_page.dart';
 import 'package:appli_recette/features/planning/view/planning_page.dart';
+import 'package:appli_recette/features/recipes/view/edit_recipe_screen.dart';
 import 'package:appli_recette/features/recipes/view/new_recipe_page.dart';
+import 'package:appli_recette/features/recipes/view/recipe_detail_screen.dart';
 import 'package:appli_recette/features/recipes/view/recipes_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +15,8 @@ abstract class AppRoutes {
   static const household = '/household';
   static const planning = '/planning';
   static const newRecipe = '/recipes/new';
+  static const recipeDetail = '/recipes/:id';
+  static const recipeEdit = '/recipes/:id/edit';
 }
 
 final appRouter = GoRouter(
@@ -57,10 +61,31 @@ final appRouter = GoRouter(
         ),
       ],
     ),
-    // Route modale hors shell — accessible depuis tous les onglets
+
+    // ─── Routes modales hors shell ─────────────────────────────────────────
+
+    // Nouvelle recette (FAB)
     GoRoute(
       path: AppRoutes.newRecipe,
       builder: (context, state) => const NewRecipePage(),
+    ),
+
+    // Fiche détail — doit être AVANT la route d'édition pour éviter ambiguïté
+    GoRoute(
+      path: AppRoutes.recipeDetail,
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return RecipeDetailScreen(recipeId: id);
+      },
+    ),
+
+    // Édition d'une recette
+    GoRoute(
+      path: AppRoutes.recipeEdit,
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return EditRecipeScreen(recipeId: id);
+      },
     ),
   ],
 );

@@ -45,6 +45,10 @@ class AppDatabase extends _$AppDatabase {
       onUpgrade: (m, from, to) async {
         // Migrations futures ici
       },
+      beforeOpen: (details) async {
+        // Active les foreign keys pour que les CASCADE deletes fonctionnent
+        await customStatement('PRAGMA foreign_keys = ON');
+      },
     );
   }
 }

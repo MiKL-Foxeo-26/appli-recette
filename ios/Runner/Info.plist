@@ -52,6 +52,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Permissions caméra et galerie (Story 2-3) -->
+	<key>NSCameraUsageDescription</key>
+	<string>L'application utilise la caméra pour prendre une photo de vos recettes.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>L'application accède à votre galerie pour choisir une photo de recette.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
