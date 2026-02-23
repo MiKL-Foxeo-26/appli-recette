@@ -1,5 +1,5 @@
 import 'package:appli_recette/core/database/app_database.dart';
-import 'package:appli_recette/features/home/view/home_page.dart';
+import 'package:appli_recette/features/generation/presentation/screens/home_screen.dart';
 import 'package:appli_recette/features/household/view/household_page.dart';
 import 'package:appli_recette/features/household/view/member_form_page.dart';
 import 'package:appli_recette/features/planning/view/planning_page.dart';
@@ -40,7 +40,7 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: AppRoutes.home,
-              builder: (context, state) => const HomePage(),
+              builder: (context, state) => const HomeScreen(),
             ),
           ],
         ),

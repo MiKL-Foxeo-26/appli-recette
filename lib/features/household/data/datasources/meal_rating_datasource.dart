@@ -7,6 +7,11 @@ class MealRatingDatasource {
 
   final AppDatabase _db;
 
+  /// Stream de toutes les notations (tous membres, toutes recettes).
+  Stream<List<MealRating>> watchAll() {
+    return _db.select(_db.mealRatings).watch();
+  }
+
   /// Stream des notations pour une recette donnée.
   Stream<List<MealRating>> watchForRecipe(String recipeId) {
     return (_db.select(_db.mealRatings)
