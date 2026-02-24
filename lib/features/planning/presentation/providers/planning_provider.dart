@@ -1,5 +1,6 @@
 import 'package:appli_recette/core/database/app_database.dart';
 import 'package:appli_recette/core/database/database_provider.dart';
+import 'package:appli_recette/core/sync/sync_provider.dart';
 import 'package:appli_recette/features/planning/data/datasources/presence_local_datasource.dart';
 import 'package:appli_recette/features/planning/data/repositories/planning_repository_impl.dart';
 import 'package:appli_recette/features/planning/data/utils/week_utils.dart';
@@ -22,7 +23,8 @@ final presenceLocalDatasourceProvider =
 
 final planningRepositoryProvider = Provider<PlanningRepository>((ref) {
   final datasource = ref.watch(presenceLocalDatasourceProvider);
-  return PlanningRepositoryImpl(datasource);
+  final syncQueue = ref.watch(syncQueueDatasourceProvider);
+  return PlanningRepositoryImpl(datasource, syncQueue);
 });
 
 // ---------------------------------------------------------------------------

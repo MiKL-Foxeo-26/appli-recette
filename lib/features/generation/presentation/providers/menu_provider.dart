@@ -25,13 +25,13 @@ final menuRepositoryProvider = Provider<MenuRepository>((ref) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Stream de tous les menus validés (historique).
-final validatedMenusStreamProvider = StreamProvider<List<WeeklyMenu>>((ref) {
+final validatedMenusStreamProvider = StreamProvider<List<WeeklyMenusData>>((ref) {
   return ref.watch(menuRepositoryProvider).watchValidatedMenus();
 });
 
 /// Stream du menu pour la semaine sélectionnée.
 final menuForWeekProvider =
-    StreamProvider.family<WeeklyMenu?, String>((ref, weekKey) {
+    StreamProvider.family<WeeklyMenusData?, String>((ref, weekKey) {
   return ref.watch(menuRepositoryProvider).watchMenuForWeek(weekKey);
 });
 
@@ -40,9 +40,9 @@ final menuForWeekProvider =
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// État de l'historique des menus validés.
-class MenuHistoryNotifier extends AsyncNotifier<List<WeeklyMenu>> {
+class MenuHistoryNotifier extends AsyncNotifier<List<WeeklyMenusData>> {
   @override
-  Future<List<WeeklyMenu>> build() async {
+  Future<List<WeeklyMenusData>> build() async {
     // Écouter le stream et attendre sa première émission correctement.
     // ref.watch() permet la reconstruction quand le stream émet une nouvelle valeur.
     return await ref.watch(validatedMenusStreamProvider.future);
@@ -74,7 +74,7 @@ class MenuHistoryNotifier extends AsyncNotifier<List<WeeklyMenu>> {
 }
 
 final menuHistoryNotifierProvider =
-    AsyncNotifierProvider<MenuHistoryNotifier, List<WeeklyMenu>>(
+    AsyncNotifierProvider<MenuHistoryNotifier, List<WeeklyMenusData>>(
   MenuHistoryNotifier.new,
 );
 

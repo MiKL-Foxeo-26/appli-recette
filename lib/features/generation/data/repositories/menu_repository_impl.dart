@@ -9,11 +9,11 @@ class MenuRepositoryImpl implements MenuRepository {
   final MenuLocalDatasource _datasource;
 
   @override
-  Stream<List<WeeklyMenu>> watchValidatedMenus() =>
+  Stream<List<WeeklyMenusData>> watchValidatedMenus() =>
       _datasource.watchValidatedMenus();
 
   @override
-  Stream<WeeklyMenu?> watchMenuForWeek(String weekKey) =>
+  Stream<WeeklyMenusData?> watchMenuForWeek(String weekKey) =>
       _datasource.watchMenuForWeek(weekKey);
 
   @override

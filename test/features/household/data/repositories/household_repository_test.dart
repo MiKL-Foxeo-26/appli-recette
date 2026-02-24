@@ -1,10 +1,12 @@
 import 'package:appli_recette/core/database/app_database.dart';
+import 'package:appli_recette/core/sync/sync_queue_datasource.dart';
 import 'package:appli_recette/features/household/data/datasources/meal_rating_datasource.dart';
 import 'package:appli_recette/features/household/data/datasources/member_local_datasource.dart';
 import 'package:appli_recette/features/household/data/models/rating_value.dart';
 import 'package:appli_recette/features/household/data/repositories/household_repository_impl.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Crée une base de données drift en mémoire pour les tests.
 AppDatabase _createTestDatabase() => AppDatabase.forTesting(
@@ -12,14 +14,18 @@ AppDatabase _createTestDatabase() => AppDatabase.forTesting(
     );
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late AppDatabase db;
   late HouseholdRepositoryImpl repo;
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     db = _createTestDatabase();
     final memberDs = MemberLocalDatasource(db);
     final ratingDs = MealRatingDatasource(db);
-    repo = HouseholdRepositoryImpl(memberDs, ratingDs);
+    final syncQueue = SyncQueueDatasource(db);
+    repo = HouseholdRepositoryImpl(memberDs, ratingDs, syncQueue);
   });
 
   tearDown(() async {

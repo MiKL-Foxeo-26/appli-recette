@@ -2,10 +2,26 @@ import 'package:appli_recette/core/database/app_database.dart';
 import 'package:appli_recette/features/generation/data/datasources/menu_local_datasource.dart';
 import 'package:appli_recette/features/generation/data/repositories/menu_repository_impl.dart';
 import 'package:appli_recette/features/generation/domain/models/meal_slot_result.dart';
+import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 AppDatabase _buildDb() => AppDatabase.forTesting(NativeDatabase.memory());
+
+/// Insère une recette minimale dans la DB pour satisfaire la FK menu_slots.recipeId.
+Future<void> _insertRecipe(AppDatabase db, String id) async {
+  final now = DateTime.now();
+  await db.into(db.recipes).insert(
+        RecipesCompanion.insert(
+          id: id,
+          name: 'Recette $id',
+          mealType: 'lunch',
+          prepTimeMinutes: const Value(0),
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+}
 
 void main() {
   late AppDatabase db;
@@ -22,6 +38,10 @@ void main() {
 
   group('MenuRepository — saveValidatedMenu', () {
     test('crée les enregistrements WeeklyMenu et MenuSlot corrects', () async {
+      await _insertRecipe(db, 'r1');
+      await _insertRecipe(db, 'r2');
+      await _insertRecipe(db, 'r3');
+
       final slots = [
         const MealSlotResult(recipeId: 'r1', dayIndex: 0, mealType: 'lunch'),
         const MealSlotResult(recipeId: 'r2', dayIndex: 0, mealType: 'dinner'),
@@ -46,6 +66,10 @@ void main() {
     });
 
     test('upsert remplace les anciens slots pour la même semaine', () async {
+      await _insertRecipe(db, 'r1');
+      await _insertRecipe(db, 'r2');
+      await _insertRecipe(db, 'r3');
+
       // Premier save
       final slots1 = [
         const MealSlotResult(recipeId: 'r1', dayIndex: 0, mealType: 'lunch'),
@@ -95,6 +119,10 @@ void main() {
     });
 
     test('getAllSlotsFromValidatedMenus retourne tous les slots de tous les menus', () async {
+      await _insertRecipe(db, 'r1');
+      await _insertRecipe(db, 'r2');
+      await _insertRecipe(db, 'r3');
+
       await repo.saveValidatedMenu(
         weekKey: '2026-W07',
         slots: [
@@ -114,6 +142,8 @@ void main() {
     });
 
     test('les événements spéciaux ne créent pas de slot en DB', () async {
+      await _insertRecipe(db, 'r1');
+
       final slots = [
         const MealSlotResult(
           recipeId: 'special_event',

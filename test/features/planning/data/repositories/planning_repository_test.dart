@@ -1,21 +1,27 @@
 import 'package:appli_recette/core/database/app_database.dart';
+import 'package:appli_recette/core/sync/sync_queue_datasource.dart';
 import 'package:appli_recette/features/planning/data/datasources/presence_local_datasource.dart';
 import 'package:appli_recette/features/planning/data/repositories/planning_repository_impl.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 AppDatabase _createTestDatabase() =>
     AppDatabase.forTesting(NativeDatabase.memory());
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late AppDatabase db;
   late PlanningRepositoryImpl repo;
 
   setUp(() async {
+    SharedPreferences.setMockInitialValues({});
     db = _createTestDatabase();
     await db.customStatement('PRAGMA foreign_keys = ON');
     final datasource = PresenceLocalDatasource(db);
-    repo = PlanningRepositoryImpl(datasource);
+    final syncQueue = SyncQueueDatasource(db);
+    repo = PlanningRepositoryImpl(datasource, syncQueue);
   });
 
   tearDown(() async {

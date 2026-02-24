@@ -22,14 +22,18 @@ class PresenceLocalDatasource {
 
   /// Initialise le planning type pour un membre : 14 entrées (7 jours x 2 repas),
   /// toutes avec isPresent = true.
-  Future<void> initDefaultScheduleForMember(String memberId) async {
+  /// Retourne les IDs des entrées créées (pour l'enqueue sync).
+  Future<List<String>> initDefaultScheduleForMember(String memberId) async {
+    final ids = <String>[];
     await _db.batch((batch) {
       for (var day = 1; day <= 7; day++) {
         for (final slot in ['lunch', 'dinner']) {
+          final id = const Uuid().v4();
+          ids.add(id);
           batch.insert(
             _db.presenceSchedules,
             PresenceSchedulesCompanion.insert(
-              id: const Uuid().v4(),
+              id: id,
               memberId: memberId,
               dayOfWeek: day,
               mealSlot: slot,
@@ -38,6 +42,7 @@ class PresenceLocalDatasource {
         }
       }
     });
+    return ids;
   }
 
   /// Bascule la valeur isPresent d'une entrée existante dans le planning type.
@@ -66,6 +71,33 @@ class PresenceLocalDatasource {
         ),
       );
     }
+  }
+
+  /// Retourne une entrée du planning de présence par clé naturelle.
+  Future<PresenceSchedule?> findPresence({
+    required String memberId,
+    required int dayOfWeek,
+    required String mealSlot,
+    String? weekKey,
+  }) async {
+    return (_db.select(_db.presenceSchedules)
+          ..where(
+            (t) =>
+                t.memberId.equals(memberId) &
+                t.dayOfWeek.equals(dayOfWeek) &
+                t.mealSlot.equals(mealSlot) &
+                (weekKey != null
+                    ? t.weekKey.equals(weekKey)
+                    : t.weekKey.isNull()),
+          ))
+        .getSingleOrNull();
+  }
+
+  /// Retourne toutes les entrées d'overrides pour une semaine.
+  Future<List<PresenceSchedule>> getWeeklyPresences(String weekKey) async {
+    return (_db.select(_db.presenceSchedules)
+          ..where((t) => t.weekKey.equals(weekKey)))
+        .get();
   }
 
   /// Supprime toutes les entrées du planning type pour un membre.

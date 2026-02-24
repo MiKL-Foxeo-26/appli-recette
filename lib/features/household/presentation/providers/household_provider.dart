@@ -1,5 +1,6 @@
 import 'package:appli_recette/core/database/app_database.dart';
 import 'package:appli_recette/core/database/database_provider.dart';
+import 'package:appli_recette/core/sync/sync_provider.dart';
 import 'package:appli_recette/features/household/data/datasources/meal_rating_datasource.dart';
 import 'package:appli_recette/features/household/data/datasources/member_local_datasource.dart';
 import 'package:appli_recette/features/household/data/models/rating_value.dart';
@@ -28,7 +29,8 @@ final mealRatingDatasourceProvider = Provider<MealRatingDatasource>((ref) {
 final householdRepositoryProvider = Provider<HouseholdRepository>((ref) {
   final memberDs = ref.watch(memberLocalDatasourceProvider);
   final ratingDs = ref.watch(mealRatingDatasourceProvider);
-  return HouseholdRepositoryImpl(memberDs, ratingDs);
+  final syncQueue = ref.watch(syncQueueDatasourceProvider);
+  return HouseholdRepositoryImpl(memberDs, ratingDs, syncQueue);
 });
 
 // ---------------------------------------------------------------------------
@@ -55,9 +57,9 @@ class HouseholdNotifier extends AsyncNotifier<void> {
   @override
   Future<void> build() async {}
 
-  /// Ajoute un nouveau membre au foyer.
-  Future<void> addMember({required String name, int? age}) async {
-    await ref
+  /// Ajoute un nouveau membre au foyer. Retourne l'ID UUID v4 créé.
+  Future<String> addMember({required String name, int? age}) async {
+    return ref
         .read(householdRepositoryProvider)
         .addMember(name: name, age: age);
   }

@@ -1,16 +1,28 @@
+import 'dart:convert';
+
 import 'package:appli_recette/core/database/app_database.dart';
+import 'package:appli_recette/core/sync/sync_queue_datasource.dart';
 import 'package:appli_recette/features/recipes/data/datasources/recipe_local_datasource.dart';
 import 'package:appli_recette/features/recipes/domain/repositories/ingredient_repository.dart';
 import 'package:appli_recette/features/recipes/domain/repositories/recipe_repository.dart';
 import 'package:drift/drift.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 /// Implémentation concrète du RecipeRepository.
-/// Délègue au datasource local (drift).
+/// Délègue au datasource local (drift) et enfile dans la sync_queue.
 class RecipeRepositoryImpl implements RecipeRepository {
-  RecipeRepositoryImpl(this._datasource);
+  RecipeRepositoryImpl(this._datasource, this._syncQueue);
 
   final RecipeLocalDatasource _datasource;
+  final SyncQueueDatasource _syncQueue;
+
+  static const _keyHouseholdId = 'household_id';
+
+  Future<String?> _getHouseholdId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyHouseholdId);
+  }
 
   @override
   Stream<List<Recipe>> watchAll() => _datasource.watchAll();
@@ -32,7 +44,7 @@ class RecipeRepositoryImpl implements RecipeRepository {
     required int prepTimeMinutes,
     int cookTimeMinutes = 0,
     int restTimeMinutes = 0,
-  }) {
+  }) async {
     final id = const Uuid().v4();
     final now = DateTime.now();
     final companion = RecipesCompanion.insert(
@@ -45,7 +57,34 @@ class RecipeRepositoryImpl implements RecipeRepository {
       createdAt: now,
       updatedAt: now,
     );
-    return _datasource.insert(companion);
+    final result = await _datasource.insert(companion);
+
+    final householdId = await _getHouseholdId();
+    await _syncQueue.enqueue(
+      SyncQueueCompanion.insert(
+        id: const Uuid().v4(),
+        operation: 'insert',
+        entityTable: 'recipes',
+        recordId: id,
+        payload: jsonEncode({
+          'id': id,
+          'name': name,
+          'meal_type': mealType,
+          'prep_time_minutes': prepTimeMinutes,
+          'cook_time_minutes': cookTimeMinutes,
+          'rest_time_minutes': restTimeMinutes,
+          'season': 'all',
+          'is_vegetarian': false,
+          'is_favorite': false,
+          'servings': 4,
+          'created_at': now.toUtc().toIso8601String(),
+          'updated_at': now.toUtc().toIso8601String(),
+          if (householdId != null) 'household_id': householdId,
+        }),
+        createdAt: now,
+      ),
+    );
+    return result;
   }
 
   @override
@@ -63,7 +102,8 @@ class RecipeRepositoryImpl implements RecipeRepository {
     String? variants,
     String? sourceUrl,
     String? photoPath,
-  }) {
+  }) async {
+    final now = DateTime.now();
     final companion = RecipesCompanion(
       id: Value(id),
       name: Value(name),
@@ -78,9 +118,37 @@ class RecipeRepositoryImpl implements RecipeRepository {
       variants: Value(variants),
       sourceUrl: Value(sourceUrl),
       photoPath: Value(photoPath),
-      updatedAt: Value(DateTime.now()),
+      updatedAt: Value(now),
     );
-    return _datasource.update(companion);
+    await _datasource.update(companion);
+
+    final householdId = await _getHouseholdId();
+    await _syncQueue.enqueue(
+      SyncQueueCompanion.insert(
+        id: const Uuid().v4(),
+        operation: 'update',
+        entityTable: 'recipes',
+        recordId: id,
+        payload: jsonEncode({
+          'id': id,
+          'name': name,
+          'meal_type': mealType,
+          'prep_time_minutes': prepTimeMinutes,
+          'cook_time_minutes': cookTimeMinutes,
+          'rest_time_minutes': restTimeMinutes,
+          'season': season,
+          'is_vegetarian': isVegetarian,
+          'servings': servings,
+          if (notes != null) 'notes': notes,
+          if (variants != null) 'variants': variants,
+          if (sourceUrl != null) 'source_url': sourceUrl,
+          if (photoPath != null) 'photo_path': photoPath,
+          'updated_at': now.toUtc().toIso8601String(),
+          if (householdId != null) 'household_id': householdId,
+        }),
+        createdAt: now,
+      ),
+    );
   }
 
   @override
@@ -99,7 +167,8 @@ class RecipeRepositoryImpl implements RecipeRepository {
     String? sourceUrl,
     String? photoPath,
     required List<IngredientInput> ingredients,
-  }) {
+  }) async {
+    final now = DateTime.now();
     final companion = RecipesCompanion(
       id: Value(id),
       name: Value(name),
@@ -114,29 +183,101 @@ class RecipeRepositoryImpl implements RecipeRepository {
       variants: Value(variants),
       sourceUrl: Value(sourceUrl),
       photoPath: Value(photoPath),
-      updatedAt: Value(DateTime.now()),
+      updatedAt: Value(now),
     );
-    return _datasource.updateWithIngredients(
+    await _datasource.updateWithIngredients(
       recipeCompanion: companion,
       recipeId: id,
       ingredients: ingredients,
     );
+
+    final householdId = await _getHouseholdId();
+    await _syncQueue.enqueue(
+      SyncQueueCompanion.insert(
+        id: const Uuid().v4(),
+        operation: 'update',
+        entityTable: 'recipes',
+        recordId: id,
+        payload: jsonEncode({
+          'id': id,
+          'name': name,
+          'meal_type': mealType,
+          'prep_time_minutes': prepTimeMinutes,
+          'cook_time_minutes': cookTimeMinutes,
+          'rest_time_minutes': restTimeMinutes,
+          'season': season,
+          'is_vegetarian': isVegetarian,
+          'servings': servings,
+          if (notes != null) 'notes': notes,
+          if (variants != null) 'variants': variants,
+          if (sourceUrl != null) 'source_url': sourceUrl,
+          if (photoPath != null) 'photo_path': photoPath,
+          'updated_at': now.toUtc().toIso8601String(),
+          if (householdId != null) 'household_id': householdId,
+        }),
+        createdAt: now,
+      ),
+    );
   }
 
   @override
-  Future<void> delete(String id) => _datasource.delete(id);
+  Future<void> delete(String id) async {
+    await _datasource.delete(id);
+    await _syncQueue.enqueue(
+      SyncQueueCompanion.insert(
+        id: const Uuid().v4(),
+        operation: 'delete',
+        entityTable: 'recipes',
+        recordId: id,
+        payload: jsonEncode({'id': id}),
+        createdAt: DateTime.now(),
+      ),
+    );
+  }
 
   @override
   Future<void> setFavorite({
     required String id,
     required bool isFavorite,
-  }) =>
-      _datasource.updateFavorite(id: id, isFavorite: isFavorite);
+  }) async {
+    await _datasource.updateFavorite(id: id, isFavorite: isFavorite);
+    final now = DateTime.now();
+    await _syncQueue.enqueue(
+      SyncQueueCompanion.insert(
+        id: const Uuid().v4(),
+        operation: 'update',
+        entityTable: 'recipes',
+        recordId: id,
+        payload: jsonEncode({
+          'id': id,
+          'is_favorite': isFavorite,
+          'updated_at': now.toUtc().toIso8601String(),
+        }),
+        createdAt: now,
+      ),
+    );
+  }
 
   @override
   Future<void> updatePhotoPath({
     required String id,
     required String? photoPath,
-  }) =>
-      _datasource.updatePhotoPath(id: id, photoPath: photoPath);
+  }) async {
+    await _datasource.updatePhotoPath(id: id, photoPath: photoPath);
+    final now = DateTime.now();
+    await _syncQueue.enqueue(
+      SyncQueueCompanion.insert(
+        id: const Uuid().v4(),
+        operation: 'update',
+        entityTable: 'recipes',
+        recordId: id,
+        payload: jsonEncode({
+          'id': id,
+          'photo_path': photoPath,
+          'updated_at': now.toUtc().toIso8601String(),
+        }),
+        createdAt: now,
+      ),
+    );
+  }
 }

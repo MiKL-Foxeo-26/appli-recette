@@ -5,12 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Widget _buildApp({
-  required Widget child,
-  List<Override> overrides = const [],
-}) {
+Widget _buildApp({required Widget child}) {
   return ProviderScope(
-    overrides: overrides,
     child: MaterialApp(
       theme: ThemeData(useMaterial3: true),
       home: Scaffold(body: child),
@@ -65,7 +61,7 @@ void main() {
       // On ne peut pas appeler toggleLock sans état préexistant
       // Le state initial est null → pas d'effet
       notifier.toggleLock(3);
-      expect(container.read(generateMenuProvider).valueOrNull, isNull);
+      expect(container.read(generateMenuProvider).value, isNull);
     });
 
     test('replaceSlot modifie le recipeId du slot', () async {
@@ -80,7 +76,7 @@ void main() {
       final notifier = container.read(generateMenuProvider.notifier);
       notifier.replaceSlot(0, 'recipe-123');
       // Sans état (null), replaceSlot ne fait rien
-      expect(container.read(generateMenuProvider).valueOrNull, isNull);
+      expect(container.read(generateMenuProvider).value, isNull);
     });
   });
 

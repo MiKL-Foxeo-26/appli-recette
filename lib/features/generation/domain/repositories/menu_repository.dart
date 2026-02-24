@@ -4,10 +4,10 @@ import 'package:appli_recette/features/generation/domain/models/meal_slot_result
 /// Interface du repository pour la persistance des menus hebdomadaires.
 abstract class MenuRepository {
   /// Stream de tous les menus validés, triés du plus récent au plus ancien.
-  Stream<List<WeeklyMenu>> watchValidatedMenus();
+  Stream<List<WeeklyMenusData>> watchValidatedMenus();
 
   /// Stream du menu pour une semaine donnée (null si inexistant).
-  Stream<WeeklyMenu?> watchMenuForWeek(String weekKey);
+  Stream<WeeklyMenusData?> watchMenuForWeek(String weekKey);
 
   /// Slots d'un menu spécifique.
   Future<List<MenuSlot>> getSlotsForMenu(String weeklyMenuId);

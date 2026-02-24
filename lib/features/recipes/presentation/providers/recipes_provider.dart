@@ -1,6 +1,8 @@
+import 'package:appli_recette/core/constants/generation_constants.dart';
 import 'package:appli_recette/core/database/app_database.dart';
 import 'package:appli_recette/core/database/database_provider.dart';
 import 'package:appli_recette/core/storage/image_service.dart';
+import 'package:appli_recette/core/sync/sync_provider.dart';
 import 'package:appli_recette/features/recipes/data/datasources/ingredient_local_datasource.dart';
 import 'package:appli_recette/features/recipes/data/datasources/recipe_local_datasource.dart';
 import 'package:appli_recette/features/recipes/data/repositories/ingredient_repository_impl.dart';
@@ -32,7 +34,8 @@ final ingredientLocalDatasourceProvider =
 
 final recipeRepositoryProvider = Provider<RecipeRepository>((ref) {
   final datasource = ref.watch(recipeLocalDatasourceProvider);
-  return RecipeRepositoryImpl(datasource);
+  final syncQueue = ref.watch(syncQueueDatasourceProvider);
+  return RecipeRepositoryImpl(datasource, syncQueue);
 });
 
 final ingredientRepositoryProvider = Provider<IngredientRepository>((ref) {
@@ -71,6 +74,18 @@ final recipeByIdProvider =
     StreamProvider.family<Recipe?, String>((ref, id) {
   final repo = ref.watch(recipeRepositoryProvider);
   return repo.watchById(id);
+});
+
+/// Nombre de recettes dans la collection (dérivé de [recipesStreamProvider]).
+///
+/// Se met à jour automatiquement dès qu'une recette est ajoutée ou supprimée.
+final recipeCountProvider = Provider<int>((ref) {
+  return ref.watch(recipesStreamProvider).value?.length ?? 0;
+});
+
+/// True si l'utilisateur peut générer un menu (minimum [kMinRecipesForGeneration] recettes).
+final canGenerateProvider = Provider<bool>((ref) {
+  return ref.watch(recipeCountProvider) >= kMinRecipesForGeneration;
 });
 
 // ---------------------------------------------------------------------------

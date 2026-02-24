@@ -14,7 +14,7 @@ class MenuLocalDatasource {
   // ─────────────────────────────────────────────────────────────────────────
 
   /// Stream de tous les menus validés, triés par weekKey DESC.
-  Stream<List<WeeklyMenu>> watchValidatedMenus() {
+  Stream<List<WeeklyMenusData>> watchValidatedMenus() {
     return (_db.select(_db.weeklyMenus)
           ..where((t) => t.isValidated.equals(true))
           ..orderBy([(t) => OrderingTerm.desc(t.weekKey)]))
@@ -22,7 +22,7 @@ class MenuLocalDatasource {
   }
 
   /// Stream d'un menu par weekKey (peut être null si inexistant).
-  Stream<WeeklyMenu?> watchMenuForWeek(String weekKey) {
+  Stream<WeeklyMenusData?> watchMenuForWeek(String weekKey) {
     return (_db.select(_db.weeklyMenus)
           ..where((t) => t.weekKey.equals(weekKey)))
         .watchSingleOrNull();
@@ -42,19 +42,28 @@ class MenuLocalDatasource {
         .watch();
   }
 
-  /// Récupère TOUS les slots de TOUS les menus validés (pour anti-répétition).
+  /// Récupère les slots des menus validés récents (pour anti-répétition).
   ///
-  /// Utilise un JOIN pour éviter les N+1 requêtes SQL.
-  Future<List<MenuSlot>> getAllSlotsFromValidatedMenus() async {
-    final query = _db.select(_db.menuSlots).join([
-      innerJoin(
-        _db.weeklyMenus,
-        _db.weeklyMenus.id.equalsExp(_db.menuSlots.weeklyMenuId),
-      ),
-    ])..where(_db.weeklyMenus.isValidated.equals(true));
+  /// Limité aux [maxMenus] derniers menus validés pour éviter une croissance
+  /// non bornée. Utilise un JOIN pour éviter les N+1 requêtes SQL.
+  Future<List<MenuSlot>> getAllSlotsFromValidatedMenus({
+    int maxMenus = 12,
+  }) async {
+    // D'abord récupérer les IDs des N derniers menus validés
+    final recentMenus = await (_db.select(_db.weeklyMenus)
+          ..where((t) => t.isValidated.equals(true))
+          ..orderBy([(t) => OrderingTerm.desc(t.weekKey)])
+          ..limit(maxMenus))
+        .get();
 
-    final rows = await query.get();
-    return rows.map((row) => row.readTable(_db.menuSlots)).toList();
+    if (recentMenus.isEmpty) return [];
+
+    final menuIds = recentMenus.map((m) => m.id).toList();
+
+    final query = _db.select(_db.menuSlots)
+      ..where((t) => t.weeklyMenuId.isIn(menuIds));
+
+    return query.get();
   }
 
   // ─────────────────────────────────────────────────────────────────────────

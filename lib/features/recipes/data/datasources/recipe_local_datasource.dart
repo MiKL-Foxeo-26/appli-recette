@@ -17,15 +17,15 @@ class RecipeLocalDatasource {
   }
 
   /// Flux de recettes filtrées par recherche sur le nom.
-  /// Échappe les caractères LIKE spéciaux (% et _) dans le query.
+  /// Les caractères LIKE spéciaux (% et _) sont supprimés du query.
   Stream<List<Recipe>> watchBySearch(String query) {
-    final escaped = query
-        .replaceAll(r'\', r'\\')
-        .replaceAll('%', r'\%')
-        .replaceAll('_', r'\_');
+    // drift v2 ne supporte pas le paramètre `escape` sur like() —
+    // on supprime les caractères LIKE spéciaux pour éviter les faux-positifs.
+    final safeQuery =
+        query.replaceAll('%', '').replaceAll('_', '').replaceAll(r'\', '');
     return (_db.select(_db.recipes)
           ..where(
-            (t) => t.name.like('%$escaped%', escape: r'\'),
+            (t) => t.name.like('%$safeQuery%'),
           )
           ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
         .watch();

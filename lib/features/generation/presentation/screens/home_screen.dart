@@ -1,6 +1,8 @@
+import 'package:appli_recette/core/constants/generation_constants.dart';
 import 'package:appli_recette/core/database/app_database.dart';
 import 'package:appli_recette/core/router/app_router.dart';
 import 'package:appli_recette/core/theme/app_colors.dart';
+import 'package:appli_recette/core/widgets/sync_status_badge.dart';
 import 'package:appli_recette/features/generation/domain/models/generation_filters.dart';
 import 'package:appli_recette/features/generation/presentation/providers/generation_provider.dart';
 import 'package:appli_recette/features/generation/presentation/providers/menu_provider.dart';
@@ -44,8 +46,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final hasUnlocked = ref.watch(hasUnlockedSlotsProvider);
     final recipesAsync = ref.watch(recipesStreamProvider);
     final weekKey = ref.watch(selectedWeekKeyProvider);
+    final canGenerate = ref.watch(canGenerateProvider);
+    final recipeCount = ref.watch(recipeCountProvider);
 
-    final recipesMap = {
+    final recipesMap = <String, Recipe>{
       for (final r in recipesAsync.value ?? []) r.id: r,
     };
 
@@ -53,6 +57,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       appBar: AppBar(
         title: Text('Semaine $weekKey'),
         actions: [
+          // ── Badge sync cloud (AC-7 Story 7.1) ──
+          const SyncStatusBadge(),
+
           // ── Icône filtres ──
           Stack(
             clipBehavior: Clip.none,
@@ -78,7 +85,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ],
           ),
 
-          // ── Bouton Générer ──
+          // ── Bouton Générer (désactivé si < 3 recettes) ──
           menuAsync.when(
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
@@ -87,44 +94,57 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 return TextButton.icon(
                   icon: const Icon(Icons.refresh),
                   label: const Text('Regénérer'),
-                  onPressed: _generate,
+                  onPressed: canGenerate ? _generate : null,
                 );
               }
               return TextButton(
-                onPressed: _generate,
+                onPressed: canGenerate ? _generate : null,
                 child: const Text('Générer'),
               );
             },
           ),
         ],
       ),
-      body: menuAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, size: 48),
-              const SizedBox(height: 8),
-              Text(
-                'Impossible de générer le menu.\nRéessaie dans un instant.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium,
+      body: Column(
+        children: [
+          // ── Banner débloquage (Story 6.2) ──
+          if (!canGenerate)
+            _GenerationUnlockBanner(recipeCount: recipeCount),
+
+          // ── Contenu principal ──
+          Expanded(
+            child: menuAsync.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (error, _) => Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Impossible de générer le menu.\nRéessaie dans un instant.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: canGenerate ? _generate : null,
+                      child: const Text('Réessayer'),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _generate,
-                child: const Text('Réessayer'),
-              ),
-            ],
+              data: (menuState) {
+                if (menuState == null) {
+                  return _buildEmptyState(context);
+                }
+                return _buildMenuView(
+                    context, menuState, recipesMap, weekKey);
+              },
+            ),
           ),
-        ),
-        data: (menuState) {
-          if (menuState == null) {
-            return _buildEmptyState(context);
-          }
-          return _buildMenuView(context, menuState, recipesMap, weekKey);
-        },
+        ],
       ),
     );
   }
@@ -334,6 +354,67 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         content: Text('Menu sauvegardé ✓'),
         backgroundColor: Color(0xFF6BAE75),
         duration: Duration(seconds: 3),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Widget banner — débloquage de la génération (Story 6.2)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Banner informatif affiché quand l'utilisateur a moins de 3 recettes.
+///
+/// Disparaît automatiquement dès que [canGenerateProvider] passe à `true`.
+class _GenerationUnlockBanner extends StatelessWidget {
+  const _GenerationUnlockBanner({required this.recipeCount});
+
+  final int recipeCount;
+  static const _target = kMinRecipesForGeneration;
+
+  String get _message {
+    final remaining = _target - recipeCount;
+    if (recipeCount == 0) {
+      return 'Commence par ajouter 3 recettes pour générer un menu';
+    }
+    if (remaining == 1) {
+      return 'Plus qu\'1 recette avant de pouvoir générer !';
+    }
+    return 'Ajoute encore $remaining recettes pour générer un menu';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: const Color(0xFFFFF3E0), // orange très clair
+      child: Row(
+        children: [
+          const Icon(
+            Icons.info_outline,
+            color: AppColors.primary,
+            size: 18,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _message,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Text(
+            '$recipeCount/$_target',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -130,7 +130,7 @@ class GenerateMenuNotifier
         filters: filters,
       );
 
-      final currentState = state.valueOrNull;
+      final currentState = state.value;
       final lockedIndices = currentState?.lockedSlotIndices ?? {};
 
       final service = GenerationService();
@@ -157,7 +157,7 @@ class GenerateMenuNotifier
 
   /// Bascule le verrouillage d'un créneau (toggle).
   void toggleLock(int slotIndex) {
-    final current = state.valueOrNull;
+    final current = state.value;
     if (current == null) return;
 
     final newLocked = Set<int>.from(current.lockedSlotIndices);
@@ -171,7 +171,7 @@ class GenerateMenuNotifier
 
   /// Remplace le créneau [slotIndex] par la recette [recipeId].
   void replaceSlot(int slotIndex, String recipeId) {
-    final current = state.valueOrNull;
+    final current = state.value;
     if (current == null) return;
 
     final dayIndex = slotIndex ~/ 2;
@@ -188,7 +188,7 @@ class GenerateMenuNotifier
 
   /// Vide le créneau [slotIndex] (null) et le déverrouille.
   void clearSlot(int slotIndex) {
-    final current = state.valueOrNull;
+    final current = state.value;
     if (current == null) return;
 
     final newSlots = List<MealSlotResult?>.from(current.slots);
@@ -203,7 +203,7 @@ class GenerateMenuNotifier
 
   /// Marque le créneau [slotIndex] comme événement spécial (sans recette).
   void setSpecialEvent(int slotIndex) {
-    final current = state.valueOrNull;
+    final current = state.value;
     if (current == null) return;
 
     final dayIndex = slotIndex ~/ 2;
@@ -221,7 +221,7 @@ class GenerateMenuNotifier
 
   /// Marque le menu comme validé (appelé après save dans menuHistoryNotifier).
   void markValidated() {
-    final current = state.valueOrNull;
+    final current = state.value;
     if (current == null) return;
     state = AsyncValue.data(current.copyWith(isValidated: true));
   }
@@ -241,12 +241,12 @@ final generateMenuProvider =
 
 /// True si le menu affiché a au moins un créneau rempli non verrouillé.
 final hasUnlockedSlotsProvider = Provider<bool>((ref) {
-  final state = ref.watch(generateMenuProvider).valueOrNull;
+  final state = ref.watch(generateMenuProvider).value;
   return state?.hasUnlockedFilledSlots ?? false;
 });
 
 /// Nombre de créneaux vides dans le menu généré.
 final emptySlotCountProvider = Provider<int>((ref) {
-  final state = ref.watch(generateMenuProvider).valueOrNull;
+  final state = ref.watch(generateMenuProvider).value;
   return state?.emptySlotCount ?? 0;
 });

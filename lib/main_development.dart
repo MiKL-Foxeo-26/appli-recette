@@ -26,6 +26,10 @@ Future<void> main() async {
         url: config.supabaseUrl,
         anonKey: config.supabaseAnonKey,
         debug: true,
+        // La session anonyme est persistée automatiquement dans le stockage
+        // local Flutter par supabase_flutter. Au redémarrage, Supabase la
+        // restaure lors de l'initialisation — aucune action supplémentaire
+        // requise (AC-7 Story 7.2).
       );
       return App(database: database, config: config);
     },

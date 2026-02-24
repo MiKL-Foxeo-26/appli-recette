@@ -307,7 +307,13 @@ class RecipeDetailScreen extends ConsumerWidget {
                                 url = 'https://$url';
                               }
                               final uri = Uri.tryParse(url);
-                              if (uri != null && await canLaunchUrl(uri)) {
+                              // Bloquer les schemes dangereux
+                              if (uri == null ||
+                                  (uri.scheme != 'http' &&
+                                      uri.scheme != 'https')) {
+                                return;
+                              }
+                              if (await canLaunchUrl(uri)) {
                                 await launchUrl(
                                   uri,
                                   mode: LaunchMode.externalApplication,
@@ -371,7 +377,7 @@ class RecipeDetailScreen extends ConsumerWidget {
 
     if (confirmed == true && context.mounted) {
       // Supprimer la photo du disque si elle existe
-      final recipe = ref.read(recipeByIdProvider(recipeId)).valueOrNull;
+      final recipe = ref.read(recipeByIdProvider(recipeId)).value;
       if (recipe?.photoPath != null) {
         final imageService = ref.read(imageServiceProvider);
         await imageService.deletePhoto(recipe!.photoPath!);

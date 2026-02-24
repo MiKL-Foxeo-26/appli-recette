@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_redundant_argument_values -- valeurs explicites pour la lisibilité des tests.
 
 import 'package:appli_recette/core/database/app_database.dart';
+import 'package:appli_recette/core/sync/sync_queue_datasource.dart';
 import 'package:appli_recette/features/recipes/data/datasources/ingredient_local_datasource.dart';
 import 'package:appli_recette/features/recipes/data/repositories/ingredient_repository_impl.dart';
 import 'package:appli_recette/features/recipes/data/repositories/recipe_repository_impl.dart';
@@ -8,19 +9,24 @@ import 'package:appli_recette/features/recipes/data/datasources/recipe_local_dat
 import 'package:appli_recette/features/recipes/domain/repositories/ingredient_repository.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 AppDatabase _createTestDatabase() =>
     AppDatabase.forTesting(NativeDatabase.memory());
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late AppDatabase db;
   late RecipeRepositoryImpl recipeRepo;
   late IngredientRepositoryImpl ingRepo;
   late String recipeId;
 
   setUp(() async {
+    SharedPreferences.setMockInitialValues({});
     db = _createTestDatabase();
-    recipeRepo = RecipeRepositoryImpl(RecipeLocalDatasource(db));
+    final syncQueue = SyncQueueDatasource(db);
+    recipeRepo = RecipeRepositoryImpl(RecipeLocalDatasource(db), syncQueue);
     ingRepo = IngredientRepositoryImpl(IngredientLocalDatasource(db));
 
     // Crée une recette de base pour lier les ingrédients
