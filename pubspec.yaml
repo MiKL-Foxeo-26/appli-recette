@@ -27,7 +27,7 @@ dependencies:
   riverpod_annotation: ^3.0.3
   rxdart: ^0.28.0
   shared_preferences: ^2.3.5
-  sqlite3_flutter_libs: ^0.5.28
+  sqlite3_flutter_libs: ^0.6.0+eol
   supabase_flutter: ^2.9.0
   url_launcher: ^6.3.2
   uuid: ^4.5.1
