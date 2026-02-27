@@ -1,18 +1,32 @@
+import 'dart:async';
+
 import 'package:appli_recette/core/database/app_database.dart';
+import 'package:appli_recette/core/theme/app_colors.dart';
 import 'package:appli_recette/features/planning/presentation/providers/planning_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Labels des jours de la semaine (1=Lun, 7=Dim).
-const _dayLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-
-/// Labels des repas.
-const _mealLabels = {'lunch': 'M', 'dinner': 'S'};
+/// Labels complets des jours de la semaine (1=Lun, 7=Dim).
+const _dayLabelsFull = [
+  'LUNDI',
+  'MARDI',
+  'MERCREDI',
+  'JEUDI',
+  'VENDREDI',
+  'SAMEDI',
+  'DIMANCHE',
+];
 
 /// Couleur de fond pour les cellules override.
 const _overrideBackground = Color(0xFFFFF8E1);
 
-/// Grille de toggles de présence : membres en lignes, jours × repas en colonnes.
+/// Hauteurs fixes pour aligner les deux côtés.
+const _headerHeight = 36.0;
+const _dayBannerHeight = 28.0;
+const _mealRowHeight = 40.0;
+const _dividerHeight = 1.0;
+
+/// Grille de toggles de présence : jours en lignes, membres en colonnes.
 ///
 /// Supporte deux modes :
 /// - Planning type ([weekKey] == null) : modifie le planning type
@@ -32,7 +46,8 @@ class PresenceToggleGrid extends ConsumerWidget {
   /// Si non null, la grille opère en mode semaine (overrides).
   final String? weekKey;
 
-  /// Ensemble de clés "memberId|dayOfWeek|mealSlot" identifiant les créneaux override.
+  /// Ensemble de clés "memberId|dayOfWeek|mealSlot" identifiant
+  /// les créneaux override.
   final Set<String> overrideSlots;
 
   /// Retrouve si un membre est présent pour un créneau donné.
@@ -56,83 +71,243 @@ class PresenceToggleGrid extends ConsumerWidget {
     final theme = Theme.of(context);
     final primaryColor = theme.colorScheme.primary;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columnSpacing: 4,
-        horizontalMargin: 8,
-        headingRowHeight: 56,
-        dataRowMinHeight: 48,
-        dataRowMaxHeight: 56,
-        columns: [
-          const DataColumn(label: SizedBox(width: 72)),
-          for (var day = 0; day < 7; day++) ...[
-            DataColumn(
-              label: _DayHeader(
-                dayLabel: _dayLabels[day],
-                mealLabel: _mealLabels['lunch']!,
+    // Colonne fixe (labels) + colonnes scrollables (membres)
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Colonne fixe : labels jours/repas
+        _buildFixedLabelColumn(theme),
+
+        // Colonnes membres : scroll horizontal avec scrollbar
+        Expanded(
+          child: Scrollbar(
+            thumbVisibility: true,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: _buildMembersTable(
+                ref: ref,
+                theme: theme,
+                primaryColor: primaryColor,
               ),
             ),
-            DataColumn(
-              label: _DayHeader(
-                dayLabel: day == 0 ? '' : '',
-                mealLabel: _mealLabels['dinner']!,
-                showDay: false,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Colonne fixe avec les labels jours et repas.
+  Widget _buildFixedLabelColumn(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header vide (aligné avec les prénoms)
+        const SizedBox(height: _headerHeight),
+
+        for (var dayIndex = 0; dayIndex < 7; dayIndex++) ...[
+          // Bande header jour
+          Container(
+            width: 88,
+            height: _dayBannerHeight,
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            color: AppColors.primaryLight
+                .withValues(alpha: 0.35),
+            child: Text(
+              _dayLabelsFull[dayIndex],
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
               ),
             ),
-          ],
+          ),
+
+          // Label Midi
+          Container(
+            width: 88,
+            height: _mealRowHeight,
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            color: AppColors.midiBackground,
+            child: Text(
+              '☀️ Midi',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+
+          // Label Soir
+          Container(
+            width: 88,
+            height: _mealRowHeight,
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            color: AppColors.soirBackground,
+            child: Text(
+              '🌙 Soir',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+
+          // Séparateur
+          if (dayIndex < 6)
+            const SizedBox(
+              width: 88,
+              height: _dividerHeight,
+              child: ColoredBox(color: AppColors.divider),
+            ),
         ],
-        rows: members.map((member) {
-          return DataRow(
-            cells: [
-              DataCell(
-                SizedBox(
-                  width: 72,
+      ],
+    );
+  }
+
+  /// Table scrollable avec les colonnes des membres.
+  Widget _buildMembersTable({
+    required WidgetRef ref,
+    required ThemeData theme,
+    required Color primaryColor,
+  }) {
+    final memberColWidths = <int, TableColumnWidth>{
+      for (var i = 0; i < members.length; i++)
+        i: const FixedColumnWidth(56),
+    };
+
+    return Table(
+      columnWidths: memberColWidths,
+      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+      children: [
+        // Header : prénoms
+        TableRow(
+          children: [
+            for (final member in members)
+              SizedBox(
+                height: _headerHeight,
+                child: Center(
                   child: Text(
                     member.name,
-                    style: theme.textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
-              for (var day = 1; day <= 7; day++) ...[
-                for (final slot in ['lunch', 'dinner'])
-                  DataCell(
-                    Semantics(
-                      label:
-                          'Présence de ${member.name} — ${_dayLabels[day - 1]} ${slot == "lunch" ? "midi" : "soir"}',
-                      child: _PresenceCell(
-                        isPresent: _isPresent(member.id, day, slot),
-                        isOverride: _isOverride(member.id, day, slot),
-                        primaryColor: primaryColor,
-                        onToggle: () {
-                          if (weekKey != null) {
-                            ref
-                                .read(planningNotifierProvider.notifier)
-                                .toggleWeeklyPresence(
-                                  weekKey: weekKey!,
-                                  memberId: member.id,
-                                  dayOfWeek: day,
-                                  mealSlot: slot,
-                                );
-                          } else {
-                            ref
-                                .read(planningNotifierProvider.notifier)
-                                .togglePresence(
-                                  memberId: member.id,
-                                  dayOfWeek: day,
-                                  mealSlot: slot,
-                                );
-                          }
-                        },
-                      ),
-                    ),
+          ],
+        ),
+
+        for (var dayIndex = 0; dayIndex < 7; dayIndex++) ...[
+          // Bande jour (cellules vides colorées)
+          TableRow(
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight
+                  .withValues(alpha: 0.35),
+            ),
+            children: [
+              for (var i = 0; i < members.length; i++)
+                const SizedBox(height: _dayBannerHeight),
+            ],
+          ),
+
+          // Ligne Midi
+          _buildMealRow(
+            ref: ref,
+            theme: theme,
+            primaryColor: primaryColor,
+            dayOfWeek: dayIndex + 1,
+            mealSlot: 'lunch',
+            backgroundColor: AppColors.midiBackground,
+          ),
+
+          // Ligne Soir
+          _buildMealRow(
+            ref: ref,
+            theme: theme,
+            primaryColor: primaryColor,
+            dayOfWeek: dayIndex + 1,
+            mealSlot: 'dinner',
+            backgroundColor: AppColors.soirBackground,
+          ),
+
+          // Séparateur
+          if (dayIndex < 6)
+            TableRow(
+              children: [
+                for (var i = 0; i < members.length; i++)
+                  const SizedBox(
+                    height: _dividerHeight,
+                    child: ColoredBox(color: AppColors.divider),
                   ),
               ],
-            ],
-          );
-        }).toList(),
-      ),
+            ),
+        ],
+      ],
+    );
+  }
+
+  /// Construit une ligne de repas (midi ou soir) pour un jour donné.
+  TableRow _buildMealRow({
+    required WidgetRef ref,
+    required ThemeData theme,
+    required Color primaryColor,
+    required int dayOfWeek,
+    required String mealSlot,
+    required Color backgroundColor,
+  }) {
+    return TableRow(
+      decoration: BoxDecoration(color: backgroundColor),
+      children: [
+        for (final member in members)
+          SizedBox(
+            height: _mealRowHeight,
+            child: Semantics(
+              label: 'Présence de ${member.name}'
+                  ' — ${_dayLabelsFull[dayOfWeek - 1]}'
+                  ' ${mealSlot == "lunch" ? "midi" : "soir"}',
+              child: _PresenceCell(
+              isPresent: _isPresent(
+                member.id,
+                dayOfWeek,
+                mealSlot,
+              ),
+              isOverride: _isOverride(
+                member.id,
+                dayOfWeek,
+                mealSlot,
+              ),
+              primaryColor: primaryColor,
+              onToggle: () {
+                if (weekKey != null) {
+                  unawaited(
+                    ref
+                        .read(planningNotifierProvider.notifier)
+                        .toggleWeeklyPresence(
+                          weekKey: weekKey!,
+                          memberId: member.id,
+                          dayOfWeek: dayOfWeek,
+                          mealSlot: mealSlot,
+                        ),
+                  );
+                } else {
+                  unawaited(
+                    ref
+                        .read(planningNotifierProvider.notifier)
+                        .togglePresence(
+                          memberId: member.id,
+                          dayOfWeek: dayOfWeek,
+                          mealSlot: mealSlot,
+                        ),
+                  );
+                }
+              },
+            ),
+          ),
+          ),
+      ],
     );
   }
 }
@@ -169,45 +344,6 @@ class _PresenceCell extends StatelessWidget {
         value: isPresent,
         activeColor: primaryColor,
         onChanged: (_) => onToggle(),
-      ),
-    );
-  }
-}
-
-/// En-tête de colonne avec jour abrégé + repas.
-class _DayHeader extends StatelessWidget {
-  const _DayHeader({
-    required this.dayLabel,
-    required this.mealLabel,
-    this.showDay = true,
-  });
-
-  final String dayLabel;
-  final String mealLabel;
-  final bool showDay;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return SizedBox(
-      width: 36,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (showDay && dayLabel.isNotEmpty)
-            Text(
-              dayLabel,
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          Text(
-            mealLabel,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
       ),
     );
   }

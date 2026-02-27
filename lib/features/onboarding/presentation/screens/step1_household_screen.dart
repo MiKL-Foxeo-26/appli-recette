@@ -21,15 +21,36 @@ class Step1HouseholdScreen extends ConsumerStatefulWidget {
 
 class _Step1HouseholdScreenState extends ConsumerState<Step1HouseholdScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _ageController = TextEditingController();
+  late TextEditingController _nameController;
+  late TextEditingController _ageController;
   bool _isAdding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController();
+    _ageController = TextEditingController();
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _ageController.dispose();
     super.dispose();
+  }
+
+  void _clearForm() {
+    final oldName = _nameController;
+    final oldAge = _ageController;
+    setState(() {
+      _nameController = TextEditingController();
+      _ageController = TextEditingController();
+    });
+    _formKey.currentState?.reset();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      oldName.dispose();
+      oldAge.dispose();
+    });
   }
 
   Future<void> _addMember() async {
@@ -39,19 +60,22 @@ class _Step1HouseholdScreenState extends ConsumerState<Step1HouseholdScreen> {
     final ageText = _ageController.text.trim();
     final age = ageText.isNotEmpty ? int.tryParse(ageText) : null;
 
+    // Couper la connexion IME Android AVANT le await,
+    // sinon le clavier renvoie l'ancien texte et écrase le clear.
+    FocusScope.of(context).unfocus();
+
     setState(() => _isAdding = true);
     try {
       final notifier = ref.read(householdNotifierProvider.notifier);
       final id = await notifier.addMember(name: name, age: age);
 
+      // Vider le formulaire dès que le membre est ajouté
+      if (mounted) _clearForm();
+
       // Initialiser le planning type pour ce nouveau membre
       await ref
           .read(planningNotifierProvider.notifier)
           .initializeForNewMember(id);
-
-      _nameController.clear();
-      _ageController.clear();
-      _formKey.currentState?.reset();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -191,12 +215,43 @@ class _Step1HouseholdScreenState extends ConsumerState<Step1HouseholdScreen> {
   }
 }
 
-class _MemberChip extends StatelessWidget {
+class _MemberChip extends ConsumerWidget {
   const _MemberChip({required this.member});
   final Member member;
 
+  Future<void> _deleteMember(BuildContext context, WidgetRef ref) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Supprimer ce membre ?'),
+        content: Text(
+          'Supprimer ${member.name} du foyer ? Cette action est irréversible.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.error,
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await ref
+          .read(householdNotifierProvider.notifier)
+          .deleteMember(member.id);
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -213,9 +268,11 @@ class _MemberChip extends StatelessWidget {
         ),
         title: Text(member.name),
         subtitle: member.age != null ? Text('${member.age} ans') : null,
-        trailing: const Icon(
-          Icons.check_circle,
-          color: AppColors.success,
+        trailing: IconButton(
+          icon: const Icon(Icons.delete_outline),
+          color: AppColors.error,
+          tooltip: 'Supprimer',
+          onPressed: () => _deleteMember(context, ref),
         ),
       ),
     );

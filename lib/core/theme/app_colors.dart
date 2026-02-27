@@ -30,6 +30,10 @@ abstract class AppColors {
   static const Color divider = Color(0xFFE8D5C4);
   static const Color disabled = Color(0xFFCCBBAA);
 
+  // Planning grid
+  static const Color midiBackground = Color(0xFFFFF8E1);
+  static const Color soirBackground = Color(0xFFE8EAF6);
+
   // Ratings
   static const Color liked = Color(0xFF6BAE75);
   static const Color neutral = Color(0xFFB89880);

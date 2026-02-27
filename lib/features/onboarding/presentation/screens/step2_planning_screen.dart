@@ -40,8 +40,8 @@ class Step2PlanningScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Configure qui est présent pour chaque repas de la semaine. '
-            'Tu pourras modifier ça à tout moment.',
+            'Définis ton planning type de la semaine. Idéal si ta routine '
+            'est souvent la même ! Tu pourras le modifier à tout moment.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: AppColors.textSecondary,
             ),
@@ -79,17 +79,19 @@ class Step2PlanningScreen extends ConsumerWidget {
                 label: const Text('Retour'),
               ),
               const Spacer(),
-              Expanded(
-                flex: 2,
-                child: SizedBox(
-                  height: 48,
-                  child: FilledButton(
-                    onPressed: onNext,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                    ),
-                    child: const Text('Suivant →'),
+              TextButton(
+                onPressed: onNext,
+                child: const Text('Passer ▸'),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                height: 48,
+                child: FilledButton(
+                  onPressed: onNext,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
                   ),
+                  child: const Text('Suivant →'),
                 ),
               ),
             ],
