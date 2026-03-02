@@ -38,18 +38,23 @@ class HouseholdAuthService {
 
   /// Crée un nouveau foyer.
   ///
-  /// 1. S'authentifie anonymement.
+  /// 1. Utilise l'utilisateur authentifié via Supabase Auth (email/password).
   /// 2. Génère un code unique à 6 chiffres.
   /// 3. Insère dans `households` + `household_auth_devices`.
   /// 4. Stocke le household_id localement.
   /// 5. Met à jour les enregistrements locaux existants.
   ///
   /// Retourne le code à 6 chiffres à afficher à l'utilisateur.
+  ///
+  /// Lève une exception si l'utilisateur n'est pas authentifié.
   Future<String> createHousehold() async {
-    await _client.auth.signInAnonymously();
+    // L'authentification est maintenant gérée par AuthService (email/password).
+    // Plus de signInAnonymously() — l'utilisateur doit être connecté.
     final user = _client.auth.currentUser;
     if (user == null) {
-      throw Exception('Échec de l\'authentification anonyme');
+      throw Exception(
+        'Utilisateur non authentifié. Connectez-vous avant de créer un foyer.',
+      );
     }
     final userId = user.id;
 
@@ -83,10 +88,12 @@ class HouseholdAuthService {
       throw const InvalidCodeFormatException();
     }
 
-    await _client.auth.signInAnonymously();
+    // L'authentification est gérée par AuthService — pas de signInAnonymously.
     final user = _client.auth.currentUser;
     if (user == null) {
-      throw Exception('Échec de l\'authentification anonyme');
+      throw Exception(
+        'Utilisateur non authentifié. Connectez-vous avant de rejoindre un foyer.',
+      );
     }
     final userId = user.id;
 

@@ -1,22 +1,32 @@
 import 'package:appli_recette/core/database/app_database.dart';
+import 'package:appli_recette/core/router/app_router_notifier.dart';
+import 'package:appli_recette/features/auth/presentation/screens/forgot_password_screen.dart';
+import 'package:appli_recette/features/auth/presentation/screens/login_screen.dart';
+import 'package:appli_recette/features/auth/presentation/screens/signup_screen.dart';
+import 'package:appli_recette/features/auth/presentation/screens/verify_email_screen.dart';
 import 'package:appli_recette/features/generation/presentation/screens/home_screen.dart';
 import 'package:appli_recette/features/household/view/household_page.dart';
 import 'package:appli_recette/features/household/view/member_form_page.dart';
+import 'package:appli_recette/features/onboarding/presentation/screens/household_setup_screen.dart';
+import 'package:appli_recette/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:appli_recette/features/planning/view/planning_page.dart';
+import 'package:appli_recette/features/recipes/view/create_full_recipe_page.dart';
 import 'package:appli_recette/features/recipes/view/edit_recipe_screen.dart';
 import 'package:appli_recette/features/recipes/view/new_recipe_page.dart';
 import 'package:appli_recette/features/recipes/view/recipe_detail_screen.dart';
 import 'package:appli_recette/features/recipes/view/recipes_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-/// Routes de l'application
+/// Routes de l'application.
 abstract class AppRoutes {
   static const home = '/';
   static const recipes = '/recipes';
   static const household = '/household';
   static const planning = '/planning';
   static const newRecipe = '/recipes/new';
+  static const createFullRecipe = '/recipes/create-full';
   static const recipeDetail = '/recipes/:id';
   static const recipeEdit = '/recipes/:id/edit';
 
@@ -24,104 +34,156 @@ abstract class AppRoutes {
   static const memberAdd = '/household/member/add';
   static const memberEdit = '/household/member/:id/edit';
 
+  // Auth (Story 8.1)
+  static const login = '/login';
+  static const signup = '/signup';
+  static const forgotPassword = '/forgot-password';
+  static const verifyEmail = '/verify-email';
+
+  // Setup (Story 8.2)
+  static const householdSetup = '/household-setup';
+
+  // Onboarding
+  static const onboarding = '/onboarding';
+
   /// Génère le chemin d'édition pour un membre donné.
   static String memberEditPath(String id) => '/household/member/$id/edit';
 }
 
-final appRouter = GoRouter(
-  initialLocation: AppRoutes.home,
-  routes: [
-    StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) {
-        return AppShell(navigationShell: navigationShell);
-      },
-      branches: [
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: AppRoutes.home,
-              builder: (context, state) => const HomeScreen(),
-            ),
-          ],
+/// Provider du GoRouter — accède à [AppRouterNotifier] pour les redirects.
+///
+/// Utilise [appRouterNotifierProvider] comme [refreshListenable] afin de
+/// ré-évaluer les redirects à chaque changement d'auth, foyer ou onboarding.
+final appRouterProvider = Provider<GoRouter>((ref) {
+  final notifier = ref.watch(appRouterNotifierProvider);
+
+  final router = GoRouter(
+    initialLocation: AppRoutes.home,
+    refreshListenable: notifier,
+    redirect: notifier.redirect,
+    routes: [
+      // ─── Routes auth (hors shell) ─────────────────────────────────────────
+      GoRoute(
+        path: AppRoutes.login,
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.signup,
+        builder: (context, state) => const SignupScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.verifyEmail,
+        builder: (context, state) => VerifyEmailScreen(
+          email: state.extra as String?,
         ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: AppRoutes.recipes,
-              builder: (context, state) => const RecipesPage(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: AppRoutes.household,
-              builder: (context, state) => const HouseholdPage(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: AppRoutes.planning,
-              builder: (context, state) => const PlanningPage(),
-            ),
-          ],
-        ),
-      ],
-    ),
+      ),
 
-    // ─── Routes modales hors shell ─────────────────────────────────────────
+      // ─── Setup foyer (hors shell — Story 8.2) ────────────────────────────
+      GoRoute(
+        path: AppRoutes.householdSetup,
+        builder: (context, state) => const HouseholdSetupScreen(),
+      ),
 
-    // Nouvelle recette (FAB)
-    GoRoute(
-      path: AppRoutes.newRecipe,
-      builder: (context, state) => const NewRecipePage(),
-    ),
+      // ─── Onboarding 3 étapes (hors shell) ────────────────────────────────
+      GoRoute(
+        path: AppRoutes.onboarding,
+        builder: (context, state) => const OnboardingScreen(),
+      ),
 
-    // Fiche détail — doit être AVANT la route d'édition pour éviter ambiguïté
-    GoRoute(
-      path: AppRoutes.recipeDetail,
-      builder: (context, state) {
-        final id = state.pathParameters['id']!;
-        return RecipeDetailScreen(recipeId: id);
-      },
-    ),
+      // ─── Shell principal avec BottomNavigationBar ─────────────────────────
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return AppShell(navigationShell: navigationShell);
+        },
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.home,
+                builder: (context, state) => const HomeScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.recipes,
+                builder: (context, state) => const RecipesPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.household,
+                builder: (context, state) => const HouseholdPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.planning,
+                builder: (context, state) => const PlanningPage(),
+              ),
+            ],
+          ),
+        ],
+      ),
 
-    // Édition d'une recette
-    GoRoute(
-      path: AppRoutes.recipeEdit,
-      builder: (context, state) {
-        final id = state.pathParameters['id']!;
-        return EditRecipeScreen(recipeId: id);
-      },
-    ),
+      // ─── Routes modales hors shell ─────────────────────────────────────────
 
-    // ─── Routes membres du foyer ───────────────────────────────────────────
+      GoRoute(
+        path: AppRoutes.newRecipe,
+        builder: (context, state) => const NewRecipePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.createFullRecipe,
+        builder: (context, state) => const CreateFullRecipePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.recipeDetail,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return RecipeDetailScreen(recipeId: id);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.recipeEdit,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return EditRecipeScreen(recipeId: id);
+        },
+      ),
 
-    // Nouveau membre
-    GoRoute(
-      path: AppRoutes.memberAdd,
-      builder: (context, state) => const MemberFormPage(),
-    ),
+      // ─── Routes membres du foyer ───────────────────────────────────────────
+      GoRoute(
+        path: AppRoutes.memberAdd,
+        builder: (context, state) => const MemberFormPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.memberEdit,
+        redirect: (context, state) {
+          if (state.extra == null) return AppRoutes.household;
+          return null;
+        },
+        builder: (context, state) {
+          final member = state.extra! as Member;
+          return MemberFormPage(member: member);
+        },
+      ),
+    ],
+  );
 
-    // Édition d'un membre (le Member est passé via state.extra)
-    // Si state.extra est null (deep-link), redirige vers le foyer.
-    GoRoute(
-      path: AppRoutes.memberEdit,
-      redirect: (context, state) {
-        if (state.extra == null) return AppRoutes.household;
-        return null;
-      },
-      builder: (context, state) {
-        final member = state.extra! as Member;
-        return MemberFormPage(member: member);
-      },
-    ),
-  ],
-);
+  ref.onDispose(router.dispose);
+  return router;
+});
 
-/// Shell principal avec BottomNavigationBar + FAB
+/// Shell principal avec BottomNavigationBar + FAB.
 class AppShell extends StatelessWidget {
   const AppShell({
     required this.navigationShell,

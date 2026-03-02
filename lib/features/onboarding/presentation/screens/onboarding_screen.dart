@@ -1,6 +1,5 @@
 import 'package:appli_recette/core/theme/app_colors.dart';
 import 'package:appli_recette/features/onboarding/presentation/providers/onboarding_provider.dart';
-import 'package:appli_recette/features/onboarding/presentation/screens/household_code_screen.dart';
 import 'package:appli_recette/features/onboarding/presentation/screens/step1_household_screen.dart';
 import 'package:appli_recette/features/onboarding/presentation/screens/step2_planning_screen.dart';
 import 'package:appli_recette/features/onboarding/presentation/screens/step3_recipes_screen.dart';
@@ -44,31 +43,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Future<void> _complete() async {
-    if (!mounted) return;
-    // Proposer la création du Code Foyer avant de terminer l'onboarding (AC-1 Story 7.2).
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => HouseholdCodeScreen(
-          mode: HouseholdCodeMode.create,
-          onDone: () {
-            ref.read(onboardingNotifierProvider.notifier).complete();
-          },
-        ),
-      ),
-    );
-  }
-
-  void _openJoinHousehold() {
-    Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => HouseholdCodeScreen(
-          mode: HouseholdCodeMode.join,
-          onDone: () {
-            ref.read(onboardingNotifierProvider.notifier).complete();
-          },
-        ),
-      ),
-    );
+    // L'auth est maintenant gérée par AuthService (email/password).
+    // Le foyer est configuré via /household-setup (Story 8.2).
+    // Ici, on marque simplement l'onboarding comme terminé.
+    await ref.read(onboardingNotifierProvider.notifier).complete();
+    // GoRouter redirect redirige automatiquement vers / via authStateProvider.
   }
 
   @override
@@ -137,25 +116,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     'Étape ${_currentPage + 1}/$_totalPages — ${_stepTitles[_currentPage]}',
                     style: theme.textTheme.labelMedium?.copyWith(
                       color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-
-                  // Lien discret pour rejoindre un foyer existant (AC-5 Story 7.2)
-                  TextButton(
-                    onPressed: _openJoinHousehold,
-                    style: TextButton.styleFrom(
-                      minimumSize: Size.zero,
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 2, horizontal: 8),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: Text(
-                      'Rejoindre un foyer existant',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: AppColors.textSecondary,
-                        decoration: TextDecoration.underline,
-                      ),
                     ),
                   ),
                 ],
