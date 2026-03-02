@@ -10,6 +10,8 @@ class AppConfig {
   final String supabaseAnonKey;
   final AppFlavor flavor;
 
+  static const String webBaseUrl = 'https://appli-recette.vercel.app';
+
   bool get isDevelopment => flavor == AppFlavor.development;
   bool get isProduction => flavor == AppFlavor.production;
 }

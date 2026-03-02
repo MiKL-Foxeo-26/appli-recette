@@ -6,6 +6,7 @@ import 'package:appli_recette/features/auth/presentation/screens/signup_screen.d
 import 'package:appli_recette/features/auth/presentation/screens/verify_email_screen.dart';
 import 'package:appli_recette/features/generation/presentation/screens/home_screen.dart';
 import 'package:appli_recette/features/household/view/household_page.dart';
+import 'package:appli_recette/features/settings/presentation/screens/settings_screen.dart';
 import 'package:appli_recette/features/household/view/member_form_page.dart';
 import 'package:appli_recette/features/onboarding/presentation/screens/household_setup_screen.dart';
 import 'package:appli_recette/features/onboarding/presentation/screens/onboarding_screen.dart';
@@ -42,6 +43,12 @@ abstract class AppRoutes {
 
   // Setup (Story 8.2)
   static const householdSetup = '/household-setup';
+
+  // Settings (Story 8.3)
+  static const settings = '/settings';
+
+  // Invitation deep-link (Story 8.3)
+  static const join = '/join';
 
   // Onboarding
   static const onboarding = '/onboarding';
@@ -82,10 +89,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
-      // ─── Setup foyer (hors shell — Story 8.2) ────────────────────────────
+      // ─── Setup foyer (hors shell — Story 8.2/8.3) ───────────────────────
       GoRoute(
         path: AppRoutes.householdSetup,
-        builder: (context, state) => const HouseholdSetupScreen(),
+        builder: (context, state) => HouseholdSetupScreen(
+          initialCode: state.uri.queryParameters['code'],
+        ),
+      ),
+
+      // ─── Deep-link invitation (Story 8.3) ────────────────────────────────
+      GoRoute(
+        path: AppRoutes.join,
+        redirect: (context, state) {
+          final code = state.uri.queryParameters['code'];
+          if (code != null && code.isNotEmpty) {
+            return '${AppRoutes.householdSetup}?code=$code';
+          }
+          return AppRoutes.householdSetup;
+        },
+      ),
+
+      // ─── Réglages (Story 8.3) ────────────────────────────────────────────
+      GoRoute(
+        path: AppRoutes.settings,
+        builder: (context, state) => const SettingsScreen(),
       ),
 
       // ─── Onboarding 3 étapes (hors shell) ────────────────────────────────

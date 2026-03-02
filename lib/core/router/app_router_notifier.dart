@@ -1,5 +1,5 @@
-import 'package:appli_recette/core/auth/auth_provider.dart';
 import 'package:appli_recette/core/auth/auth_state_provider.dart';
+import 'package:appli_recette/core/household/household_providers.dart';
 import 'package:appli_recette/features/onboarding/presentation/providers/onboarding_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

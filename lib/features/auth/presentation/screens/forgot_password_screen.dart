@@ -46,9 +46,14 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       }
     } on AuthException catch (e) {
       if (mounted) {
+        final message = switch (e.message) {
+          'User not found' => 'Aucun compte trouvé avec cet email.',
+          'Invalid email' => 'Adresse email invalide.',
+          _ => 'Une erreur est survenue. Réessayez.',
+        };
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.message),
+            content: Text(message),
             backgroundColor: AppColors.error,
           ),
         );

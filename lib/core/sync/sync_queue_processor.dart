@@ -30,14 +30,16 @@ class SyncQueueProcessor {
       'id', 'name', 'age', 'household_id', 'created_at', 'updated_at',
     },
     'ingredients': {
-      'id', 'recipe_id', 'name', 'quantity', 'unit', 'created_at', 'updated_at',
+      'id', 'recipe_id', 'name', 'quantity', 'unit', 'household_id',
+      'created_at', 'updated_at',
     },
     'meal_ratings': {
-      'id', 'member_id', 'recipe_id', 'rating', 'created_at', 'updated_at',
+      'id', 'member_id', 'recipe_id', 'rating', 'household_id',
+      'created_at', 'updated_at',
     },
     'presence_schedules': {
       'id', 'member_id', 'day_of_week', 'meal_slot', 'is_present',
-      'week_override', 'created_at', 'updated_at',
+      'week_override', 'household_id', 'created_at', 'updated_at',
     },
     'weekly_menus': {
       'id', 'household_id', 'week_key', 'generated_at', 'validated_at',
@@ -45,12 +47,17 @@ class SyncQueueProcessor {
     },
     'menu_slots': {
       'id', 'weekly_menu_id', 'recipe_id', 'day_of_week', 'meal_slot',
-      'is_locked', 'created_at', 'updated_at',
+      'is_locked', 'household_id', 'created_at', 'updated_at',
     },
     'households': {
-      'id', 'code', 'created_at', 'updated_at',
+      'id', 'code', 'name', 'created_by', 'created_at', 'updated_at',
     },
   };
+
+  /// Vérifie si un champ est autorisé pour une table donnée (pour les tests).
+  static bool tableAllowsField(String table, String field) {
+    return _tableFields[table]?.contains(field) ?? false;
+  }
 
   /// Traite les opérations en attente.
   /// Skip silencieusement si pas de session Supabase (AC-8 Story 7.1).

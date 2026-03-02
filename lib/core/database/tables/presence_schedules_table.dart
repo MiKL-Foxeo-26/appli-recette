@@ -12,6 +12,7 @@ class PresenceSchedules extends Table {
   BoolColumn get isPresent => boolean().withDefault(const Constant(true))();
   // Pour les overrides ponctuels
   TextColumn get weekKey => text().nullable()(); // ex: "2026-W08" — null = planning type
+  TextColumn get householdId => text().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {id};

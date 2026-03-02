@@ -5,6 +5,7 @@ import 'package:appli_recette/core/storage/image_service.dart';
 import 'package:appli_recette/core/sync/sync_provider.dart';
 import 'package:appli_recette/features/recipes/data/datasources/ingredient_local_datasource.dart';
 import 'package:appli_recette/features/recipes/data/datasources/recipe_local_datasource.dart';
+import 'package:appli_recette/features/recipes/data/datasources/recipe_steps_local_datasource.dart';
 import 'package:appli_recette/features/recipes/data/repositories/ingredient_repository_impl.dart';
 import 'package:appli_recette/features/recipes/data/repositories/recipe_repository_impl.dart';
 import 'package:appli_recette/features/recipes/domain/repositories/ingredient_repository.dart';
@@ -26,6 +27,12 @@ final ingredientLocalDatasourceProvider =
     Provider<IngredientLocalDatasource>((ref) {
   final db = ref.watch(databaseProvider);
   return IngredientLocalDatasource(db);
+});
+
+final recipeStepsDatasourceProvider =
+    Provider<RecipeStepsLocalDatasource>((ref) {
+  final db = ref.watch(databaseProvider);
+  return RecipeStepsLocalDatasource(db);
 });
 
 // ---------------------------------------------------------------------------
@@ -213,6 +220,15 @@ class RecipesNotifier extends AsyncNotifier<void> {
   }) async {
     final repo = ref.read(recipeRepositoryProvider);
     await repo.updatePhotoPath(id: id, photoPath: photoPath);
+  }
+
+  /// Remplace toutes les étapes de préparation d'une recette.
+  Future<void> replaceSteps({
+    required String recipeId,
+    required List<RecipeStepInput> steps,
+  }) async {
+    final datasource = ref.read(recipeStepsDatasourceProvider);
+    await datasource.replaceAll(recipeId: recipeId, steps: steps);
   }
 }
 

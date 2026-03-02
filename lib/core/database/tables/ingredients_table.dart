@@ -11,6 +11,7 @@ class Ingredients extends Table {
   RealColumn get quantity => real().nullable()();
   TextColumn get unit => text().nullable()();
   TextColumn get supermarketSection => text().nullable()(); // rayon supermarché
+  TextColumn get householdId => text().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {id};

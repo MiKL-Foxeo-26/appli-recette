@@ -11,6 +11,7 @@ import 'tables/members_table.dart';
 import 'tables/menu_slots_table.dart';
 import 'tables/presence_schedules_table.dart';
 import 'tables/recipes_table.dart';
+import 'tables/recipe_steps_table.dart';
 import 'tables/sync_queue_table.dart';
 import 'tables/weekly_menus_table.dart';
 
@@ -20,6 +21,7 @@ part 'app_database.g.dart';
   tables: [
     Recipes,
     Ingredients,
+    RecipeSteps,
     Members,
     MealRatings,
     PresenceSchedules,
@@ -34,7 +36,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -43,7 +45,16 @@ class AppDatabase extends _$AppDatabase {
         await m.createAll();
       },
       onUpgrade: (m, from, to) async {
-        // Migrations futures ici
+        if (from < 2) {
+          await m.createTable(recipeSteps);
+        }
+        if (from < 3) {
+          // Story 8.4 : ajouter householdId aux tables sans cette colonne
+          await m.addColumn(ingredients, ingredients.householdId);
+          await m.addColumn(mealRatings, mealRatings.householdId);
+          await m.addColumn(presenceSchedules, presenceSchedules.householdId);
+          await m.addColumn(menuSlots, menuSlots.householdId);
+        }
       },
       beforeOpen: (details) async {
         // Active les foreign keys pour que les CASCADE deletes fonctionnent

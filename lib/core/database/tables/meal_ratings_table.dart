@@ -12,6 +12,7 @@ class MealRatings extends Table {
       text().references(Recipes, #id, onDelete: KeyAction.cascade)();
   TextColumn get rating => text()(); // liked, neutral, disliked
   DateTimeColumn get updatedAt => dateTime()();
+  TextColumn get householdId => text().nullable()();
   BoolColumn get isSynced => boolean().withDefault(const Constant(false))();
 
   @override

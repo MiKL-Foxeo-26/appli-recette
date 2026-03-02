@@ -13,6 +13,7 @@ class MenuSlots extends Table {
   IntColumn get dayOfWeek => integer()(); // 1=lundi, 7=dimanche
   TextColumn get mealSlot => text()(); // lunch, dinner
   BoolColumn get isLocked => boolean().withDefault(const Constant(false))();
+  TextColumn get householdId => text().nullable()();
   BoolColumn get isSynced => boolean().withDefault(const Constant(false))();
 
   @override
