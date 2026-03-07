@@ -254,22 +254,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     bool showGenerateHint = true,
   }) {
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.calendar_today_outlined,
-              size: 64, color: Colors.grey.shade300),
-          const SizedBox(height: 16),
-          Text(
-            showGenerateHint
-                ? 'Tape Générer pour planifier ta semaine'
-                : 'Aucun menu pour cette semaine',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Colors.grey.shade600,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.restaurant_outlined,
+                size: 64, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            Text(
+              showGenerateHint
+                  ? 'Prêt à planifier tes repas ?'
+                  : 'Aucun menu pour cette semaine',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Colors.grey.shade700,
+                    fontWeight: FontWeight.w600,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            if (showGenerateHint) ...[
+              const SizedBox(height: 8),
+              RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey.shade500,
+                      ),
+                  children: [
+                    const TextSpan(text: 'Appuie sur '),
+                    WidgetSpan(
+                      alignment: PlaceholderAlignment.middle,
+                      child: Icon(
+                        Icons.auto_awesome,
+                        size: 18,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const TextSpan(text: ' en bas pour générer ton menu'),
+                  ],
                 ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
