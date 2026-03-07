@@ -1,5 +1,6 @@
 import 'package:appli_recette/app/app.dart';
 import 'package:appli_recette/bootstrap.dart';
+import 'package:appli_recette/core/auth/email_confirmation_handler.dart';
 import 'package:appli_recette/core/config/app_config.dart';
 import 'package:appli_recette/core/database/app_database.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -25,6 +26,7 @@ Future<void> main() async {
         url: config.supabaseUrl,
         anonKey: config.supabaseAnonKey,
       );
+      await EmailConfirmationHandler.handleIfNeeded();
       return App(database: database, config: config);
     },
   );

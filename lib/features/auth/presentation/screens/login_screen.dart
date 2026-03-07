@@ -1,5 +1,6 @@
 import 'package:appli_recette/core/auth/auth_providers.dart';
 import 'package:appli_recette/core/auth/auth_service.dart';
+import 'package:appli_recette/core/auth/email_confirmation_handler.dart';
 import 'package:appli_recette/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,6 +25,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _emailJustConfirmed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkEmailConfirmation();
+  }
+
+  Future<void> _checkEmailConfirmation() async {
+    final confirmed =
+        await EmailConfirmationHandler.consumeConfirmationFlag();
+    if (confirmed && mounted) {
+      setState(() => _emailJustConfirmed = true);
+    }
+  }
 
   @override
   void dispose() {
@@ -107,7 +123,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 24),
+
+                  // Bandeau email confirmé
+                  if (_emailJustConfirmed) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.success.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppColors.success.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.check_circle_outline,
+                              color: AppColors.success, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Email confirme ! Connectez-vous '
+                              'pour acceder a votre compte.',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: AppColors.success),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
 
                   // Champ email
                   TextFormField(

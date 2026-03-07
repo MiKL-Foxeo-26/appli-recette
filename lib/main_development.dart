@@ -1,5 +1,6 @@
 import 'package:appli_recette/app/app.dart';
 import 'package:appli_recette/bootstrap.dart';
+import 'package:appli_recette/core/auth/email_confirmation_handler.dart';
 import 'package:appli_recette/core/config/app_config.dart';
 import 'package:appli_recette/core/database/app_database.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -26,11 +27,8 @@ Future<void> main() async {
         url: config.supabaseUrl,
         anonKey: config.supabaseAnonKey,
         debug: true,
-        // La session anonyme est persistée automatiquement dans le stockage
-        // local Flutter par supabase_flutter. Au redémarrage, Supabase la
-        // restaure lors de l'initialisation — aucune action supplémentaire
-        // requise (AC-7 Story 7.2).
       );
+      await EmailConfirmationHandler.handleIfNeeded();
       return App(database: database, config: config);
     },
   );
