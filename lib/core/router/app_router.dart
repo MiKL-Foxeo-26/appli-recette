@@ -110,11 +110,53 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       // ─── Deep-link invitation (Story 8.3) ────────────────────────────────
       // Le code est sauvegardé par le redirect global (app_router_notifier).
-      // Affiche un spinner pendant le temps de redirection (évite l'écran blanc).
+      // Affiche un écran de chargement avec message pendant la redirection.
       GoRoute(
         path: AppRoutes.join,
-        builder: (context, state) => const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
+        builder: (context, state) => Scaffold(
+          backgroundColor: const Color(0xFFFDF6EF),
+          body: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircularProgressIndicator(
+                      color: Color(0xFFE8794A),
+                      strokeWidth: 3,
+                    ),
+                    const SizedBox(height: 32),
+                    Text(
+                      'Connexion au foyer en cours…',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: const Color(0xFF2D2D2D),
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Nous rejoignons votre foyer automatiquement grâce au lien d\'invitation.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: const Color(0xFF757575),
+                            height: 1.5,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Cela peut prendre quelques secondes…',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: const Color(0xFFBDBDBD),
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
       ),
 
