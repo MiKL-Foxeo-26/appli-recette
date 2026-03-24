@@ -70,7 +70,7 @@ class _HouseholdSetupScreenState extends ConsumerState<HouseholdSetupScreen> {
               duration: Duration(seconds: 5),
             ),
           );
-          ref.read(autoJoinStatusProvider.notifier).state = AutoJoinStatus.idle;
+          ref.read(appRouterNotifierProvider).clearAutoJoinFailed();
         }
       });
     }

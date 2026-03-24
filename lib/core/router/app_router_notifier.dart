@@ -143,6 +143,12 @@ class AppRouterNotifier extends ChangeNotifier {
     return null;
   }
 
+  /// Réinitialise le statut auto-join après affichage de l'erreur.
+  void clearAutoJoinFailed() {
+    _autoJoinStatus = AutoJoinStatus.idle;
+    notifyListeners();
+  }
+
   /// Réinitialise le flag password recovery après changement de MDP.
   void clearPasswordRecovery() {
     _isPasswordRecovery = false;
