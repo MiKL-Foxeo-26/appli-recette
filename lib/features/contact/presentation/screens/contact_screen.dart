@@ -21,7 +21,7 @@ class ContactScreen extends ConsumerStatefulWidget {
 
 class _ContactScreenState extends ConsumerState<ContactScreen> {
   ContactType _selectedType = ContactType.bug;
-  final _messageController = TextEditingController();
+  TextEditingController _messageController = TextEditingController();
   bool _isSending = false;
   bool _sent = false;
   String? _errorMessage;
@@ -33,9 +33,23 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
   }
 
   Future<void> _send() async {
+    if (_isSending) return;
+
     final message = _messageController.text.trim();
+
     if (message.isEmpty) {
       setState(() => _errorMessage = 'Veuillez écrire un message.');
+      return;
+    }
+
+    if (message.length < 10) {
+      setState(() => _errorMessage = 'Minimum 10 caractères.');
+      return;
+    }
+
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      setState(() => _errorMessage = 'Connectez-vous pour envoyer un message.');
       return;
     }
 
@@ -45,13 +59,12 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
     });
 
     try {
-      final user = Supabase.instance.client.auth.currentUser;
       await Supabase.instance.client.functions.invoke(
         'send-contact-email',
         body: {
           'type': _selectedType.value,
           'message': message,
-          if (user?.email != null) 'userEmail': user!.email,
+          if (user.email != null) 'userEmail': user.email,
         },
       );
       if (mounted) {
@@ -60,7 +73,8 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
           _isSending = false;
         });
       }
-    } on Exception {
+    } on Exception catch (e) {
+      debugPrint('ContactScreen._send() error: $e');
       if (mounted) {
         setState(() {
           _isSending = false;
@@ -74,7 +88,7 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
     setState(() {
       _sent = false;
       _selectedType = ContactType.bug;
-      _messageController.clear();
+      _messageController = TextEditingController();
       _errorMessage = null;
     });
   }
@@ -202,11 +216,13 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
             controller: _messageController,
             maxLines: 6,
             minLines: 4,
+            maxLength: 2000,
             textInputAction: TextInputAction.newline,
             decoration: InputDecoration(
               hintText: 'Décrivez votre problème ou votre idée…',
               filled: true,
               fillColor: Colors.white,
+              counterText: '',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: Color(0xFFE0D5CC)),
@@ -239,13 +255,26 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                 ),
               ),
               child: _isSending
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
+                  ? const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          'Envoi en cours…',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
                     )
                   : const Text(
                       'Envoyer',
