@@ -1,34 +1,27 @@
-import 'package:appli_recette/core/config/app_config.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
-/// Service de génération et partage des liens d'invitation foyer.
+/// Service de partage des invitations foyer.
 class InvitationService {
   const InvitationService();
 
-  /// Génère un lien d'invitation complet pour le code foyer donné.
+  /// Partage un message d'invitation via la feuille de partage native.
   ///
-  /// Format : `https://[DOMAIN]/join?code=XXXXXX`
-  String generateInvitationLink(String code) {
-    return '${AppConfig.webBaseUrl}/join?code=$code';
-  }
-
-  /// Partage le lien d'invitation via la feuille de partage native.
-  ///
-  /// Utilise `share_plus` — déclenche le partage système (web + mobile).
+  /// Le message indique où trouver l'app et la marche à suivre,
+  /// puis affiche le code en clair — pas de lien automatique.
   Future<void> shareInvitation(String code) async {
-    final link = generateInvitationLink(code);
     await Share.share(
       '🍽️ Je t\'invite sur MenuFacile !\n'
       '\n'
       'MenuFacile planifie nos repas de la semaine en un clic.\n'
-      'Rejoins mon foyer pour qu\'on organise nos menus ensemble :\n'
+      'Rejoins mon foyer pour qu\'on organise nos menus ensemble.\n'
       '\n'
-      '👉 $link\n'
+      '📱 Rends-toi sur : menufacile.app\n'
+      '➡️  Crée un compte, puis entre le code suivant :\n'
       '\n'
-      '📋 Ton code d\'accès : $code\n'
+      '  $code\n'
       '\n'
-      'A bientôt sur MenuFacile !',
+      'À bientôt sur MenuFacile !',
       subject: 'Rejoins mon foyer sur MenuFacile !',
     );
   }

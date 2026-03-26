@@ -10,20 +10,6 @@ final householdServiceProvider = Provider<HouseholdService>((ref) {
   return HouseholdService(db);
 });
 
-/// Notifier pour l'état d'auto-join depuis un lien d'invitation.
-class AutoJoinNotifier extends Notifier<bool> {
-  @override
-  bool build() => false;
-
-  // ignore: use_setters_to_change_properties
-  void setInProgress(bool value) => state = value;
-}
-
-/// True quand un auto-join depuis un lien d'invitation est en cours.
-/// Permet à HouseholdSetupScreen d'afficher un spinner pendant l'opération.
-final autoJoinInProgressProvider =
-    NotifierProvider<AutoJoinNotifier, bool>(AutoJoinNotifier.new);
-
 /// Provider du household_id courant.
 ///
 /// 1. Vérifie SharedPreferences (local).

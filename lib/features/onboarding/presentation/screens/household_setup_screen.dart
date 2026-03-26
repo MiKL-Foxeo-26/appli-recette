@@ -1,5 +1,4 @@
 import 'package:appli_recette/core/household/household_providers.dart';
-import 'package:appli_recette/core/router/app_router_notifier.dart';
 import 'package:appli_recette/core/theme/app_colors.dart';
 import 'package:appli_recette/features/onboarding/presentation/providers/onboarding_provider.dart';
 import 'package:flutter/material.dart';
@@ -10,13 +9,10 @@ enum _SetupMode { selection, create, join }
 
 /// Écran de configuration foyer — créer ou rejoindre.
 ///
-/// Parcours 1 (étape 6) : Créer un foyer.
-/// Parcours 2 (étape 6) : Rejoindre un foyer avec code 6 chiffres.
+/// Parcours 1 : Créer un foyer.
+/// Parcours 2 : Rejoindre un foyer avec code 6 chiffres.
 class HouseholdSetupScreen extends ConsumerStatefulWidget {
-  const HouseholdSetupScreen({this.initialCode, super.key});
-
-  /// Code pré-rempli depuis un lien d'invitation (deep link).
-  final String? initialCode;
+  const HouseholdSetupScreen({super.key});
 
   @override
   ConsumerState<HouseholdSetupScreen> createState() =>
@@ -34,10 +30,6 @@ class _HouseholdSetupScreenState extends ConsumerState<HouseholdSetupScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialCode != null) {
-      _codeController.text = widget.initialCode!;
-      _mode = _SetupMode.join;
-    }
   }
 
   @override
@@ -49,32 +41,6 @@ class _HouseholdSetupScreenState extends ConsumerState<HouseholdSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Écouter l'état de l'auto-join depuis le router notifier
-    final autoJoinStatus =
-        ref.watch(appRouterNotifierProvider).autoJoinStatus;
-
-    if (autoJoinStatus == AutoJoinStatus.inProgress) {
-      return _buildAutoJoinLoading(context);
-    }
-
-    if (autoJoinStatus == AutoJoinStatus.failed) {
-      // Afficher le mode sélection avec un message d'erreur
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Connexion au foyer impossible. Vérifiez le code ou saisissez-le manuellement.',
-              ),
-              backgroundColor: AppColors.error,
-              duration: Duration(seconds: 5),
-            ),
-          );
-          ref.read(appRouterNotifierProvider).clearAutoJoinFailed();
-        }
-      });
-    }
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -100,55 +66,6 @@ class _HouseholdSetupScreenState extends ConsumerState<HouseholdSetupScreen> {
       case _SetupMode.join:
         return _buildJoin(context);
     }
-  }
-
-  /// Écran de chargement pendant l'auto-join via lien d'invitation.
-  Widget _buildAutoJoinLoading(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const CircularProgressIndicator(
-                  color: AppColors.primary,
-                  strokeWidth: 3,
-                ),
-                const SizedBox(height: 32),
-                Text(
-                  'Connexion au foyer en cours…',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Nous rejoignons votre foyer automatiquement grâce au lien d\'invitation.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
-                        height: 1.5,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Cela peut prendre quelques secondes…',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textHint,
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   // ── Mode sélection ──────────────────────────────────────────────────

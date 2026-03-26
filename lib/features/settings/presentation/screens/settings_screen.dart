@@ -194,7 +194,6 @@ class SettingsScreen extends ConsumerWidget {
     await prefs.remove('household_id');
     await prefs.remove('auth_user_id');
     await prefs.remove('household_code');
-    await prefs.remove('pending_join_code');
     ref.invalidate(currentHouseholdIdProvider);
     await authService.signOut();
 

@@ -52,9 +52,6 @@ abstract class AppRoutes {
   // Contact
   static const contact = '/contact';
 
-  // Invitation deep-link (Story 8.3)
-  static const join = '/join';
-
   // Reset mot de passe (Parcours 4)
   static const resetPassword = '/reset-password';
 
@@ -104,64 +101,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
-      // ─── Setup foyer (hors shell — Story 8.2/8.3) ───────────────────────
+      // ─── Setup foyer (hors shell) ────────────────────────────────────────
       GoRoute(
         path: AppRoutes.householdSetup,
-        builder: (context, state) => HouseholdSetupScreen(
-          initialCode: state.uri.queryParameters['code'],
-        ),
-      ),
-
-      // ─── Deep-link invitation (Story 8.3) ────────────────────────────────
-      // Le code est sauvegardé par le redirect global (app_router_notifier).
-      // Affiche un écran de chargement avec message pendant la redirection.
-      GoRoute(
-        path: AppRoutes.join,
-        builder: (context, state) => Scaffold(
-          backgroundColor: const Color(0xFFFDF6EF),
-          body: SafeArea(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const CircularProgressIndicator(
-                      color: Color(0xFFE8794A),
-                      strokeWidth: 3,
-                    ),
-                    const SizedBox(height: 32),
-                    Text(
-                      'Connexion au foyer en cours…',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: const Color(0xFF2D2D2D),
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Nous rejoignons votre foyer automatiquement grâce au lien d\'invitation.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: const Color(0xFF757575),
-                            height: 1.5,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Cela peut prendre quelques secondes…',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: const Color(0xFFBDBDBD),
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
+        builder: (context, state) => const HouseholdSetupScreen(),
       ),
 
       // ─── Réglages (Story 8.3) ────────────────────────────────────────────
