@@ -26,6 +26,7 @@ import 'package:go_router/go_router.dart';
 /// Routes de l'application.
 abstract class AppRoutes {
   static const home = '/';
+  static const loading = '/loading';
   static const recipes = '/recipes';
   static const household = '/household';
   static const planning = '/planning';
@@ -98,6 +99,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.verifyEmail,
         builder: (context, state) => VerifyEmailScreen(
           email: state.uri.queryParameters['email'] ?? state.extra as String?,
+        ),
+      ),
+
+      // ─── Écran de chargement (pendant sync initiale) ─────────────────────
+      GoRoute(
+        path: AppRoutes.loading,
+        builder: (context, state) => const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
         ),
       ),
 

@@ -73,7 +73,17 @@ class AppRouterNotifier extends ChangeNotifier {
 
     // ─── Authentifié ───────────────────────────────────────────────────
 
-    if (isOnPublicRoute) {
+    // Attendre que le foyer et l'onboarding soient chargés avant tout routing.
+    // Pendant ce temps, afficher un spinner plutôt que le home vide.
+    final householdAsync = _ref.read(currentHouseholdIdProvider);
+    final onboardingAsync = _ref.read(onboardingNotifierProvider);
+
+    if (householdAsync.isLoading || onboardingAsync.isLoading) {
+      if (currentPath == AppRoutes.loading) return null;
+      return AppRoutes.loading;
+    }
+
+    if (isOnPublicRoute || currentPath == AppRoutes.loading) {
       return _resolveAuthenticatedRoute();
     }
 
@@ -82,26 +92,20 @@ class AppRouterNotifier extends ChangeNotifier {
     }
 
     if (currentPath == AppRoutes.householdSetup) {
-      final householdAsync = _ref.read(currentHouseholdIdProvider);
       final hasHousehold = householdAsync.value != null;
       if (hasHousehold) return _checkOnboarding();
       return null;
     }
 
     if (currentPath == AppRoutes.onboarding) {
-      final onboardingAsync = _ref.read(onboardingNotifierProvider);
       final isComplete = onboardingAsync.value ?? false;
       if (isComplete) return AppRoutes.home;
       return null;
     }
 
-    final householdAsync = _ref.read(currentHouseholdIdProvider);
-    if (householdAsync.isLoading) return null;
     final hasHousehold = householdAsync.value != null;
     if (!hasHousehold) return AppRoutes.householdSetup;
 
-    final onboardingAsync = _ref.read(onboardingNotifierProvider);
-    if (onboardingAsync.isLoading) return null;
     final onboardingComplete = onboardingAsync.value ?? false;
     if (!onboardingComplete) return AppRoutes.onboarding;
 
@@ -115,9 +119,7 @@ class AppRouterNotifier extends ChangeNotifier {
   }
 
   String? _resolveAuthenticatedRoute() {
-    final householdAsync = _ref.read(currentHouseholdIdProvider);
-    if (householdAsync.isLoading) return null;
-    final hasHousehold = householdAsync.value != null;
+    final hasHousehold = _ref.read(currentHouseholdIdProvider).value != null;
     if (!hasHousehold) return AppRoutes.householdSetup;
     return _checkOnboarding();
   }
