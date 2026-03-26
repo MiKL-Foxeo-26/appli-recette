@@ -202,6 +202,11 @@ class HouseholdService {
       final householdId = row['household_id'] as String;
       await _persistHouseholdId(householdId);
 
+      // Si on a dû aller chercher le foyer dans Supabase (prefs locales vides),
+      // c'est que l'utilisateur a déjà complété le setup (création + onboarding).
+      // On restaure le flag onboarding_complete pour ne pas re-montrer le wizard.
+      await prefs.setBool('onboarding_complete', true);
+
       // Récupérer et mettre en cache le code du foyer
       try {
         final householdRow = await _client
