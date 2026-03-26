@@ -202,24 +202,23 @@ class HouseholdService {
       final householdId = row['household_id'] as String;
       await _persistHouseholdId(householdId);
 
-      // Si on a dû aller chercher le foyer dans Supabase (prefs locales vides),
-      // c'est que l'utilisateur a déjà complété le setup (création + onboarding).
-      // On restaure le flag onboarding_complete pour ne pas re-montrer le wizard.
-      await prefs.setBool('onboarding_complete', true);
-
-      // Récupérer et mettre en cache le code du foyer
+      // Récupérer code + statut onboarding depuis Supabase.
+      // onboarding_completed est stocké sur le foyer → indépendant du cache navigateur.
       try {
         final householdRow = await _client
             .from('households')
-            .select('code')
+            .select('code, onboarding_completed')
             .eq('id', householdId)
             .maybeSingle();
         if (householdRow != null) {
           await prefs.setString(
               _keyHouseholdCode, householdRow['code'] as String);
+          final onboardingDone =
+              householdRow['onboarding_completed'] as bool? ?? false;
+          await prefs.setBool('onboarding_complete', onboardingDone);
         }
       } catch (_) {
-        // Le code sera récupéré au prochain accès si nécessaire
+        // Le code/onboarding sera récupéré au prochain accès si nécessaire
       }
 
       // Sync en arrière-plan — CRITIQUE : ne pas bloquer le retour du
@@ -235,6 +234,23 @@ class HouseholdService {
     } catch (e) {
       debugPrint('[HouseholdService] getCurrentHouseholdId error: $e');
       return null;
+    }
+  }
+
+  /// Marque l'onboarding comme terminé dans Supabase (table households).
+  ///
+  /// Appelé quand l'utilisateur termine le wizard d'onboarding.
+  /// Persiste sur le foyer → indépendant du cache navigateur ou de l'appareil.
+  Future<void> markOnboardingComplete() async {
+    final prefs = await SharedPreferences.getInstance();
+    final householdId = prefs.getString(_keyHouseholdId);
+    if (householdId == null) return;
+    try {
+      await _client
+          .from('households')
+          .update({'onboarding_completed': true}).eq('id', householdId);
+    } catch (e) {
+      debugPrint('[HouseholdService] markOnboardingComplete error: $e');
     }
   }
 

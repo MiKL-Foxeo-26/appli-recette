@@ -1,3 +1,4 @@
+import 'package:appli_recette/core/household/household_providers.dart';
 import 'package:appli_recette/features/onboarding/domain/onboarding_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -20,10 +21,12 @@ class OnboardingNotifier extends AsyncNotifier<bool> {
     return service.isComplete();
   }
 
-  /// Marque l'onboarding comme terminé.
+  /// Marque l'onboarding comme terminé — localement ET dans Supabase.
   Future<void> complete() async {
     final service = ref.read(onboardingServiceProvider);
     await service.setComplete();
+    // Persiste aussi dans Supabase sur le foyer → survit à l'effacement du cache.
+    await ref.read(householdServiceProvider).markOnboardingComplete();
     state = const AsyncData(true);
   }
 
