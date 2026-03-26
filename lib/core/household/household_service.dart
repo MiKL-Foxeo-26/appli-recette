@@ -168,73 +168,70 @@ class HouseholdService {
   Future<String?> getCurrentHouseholdId() async {
     final prefs = await SharedPreferences.getInstance();
     final user = _client.auth.currentUser;
+
+    // Pas authentifié → rien à faire
+    if (user == null) return null;
+
+    // ── Résolution du household_id ──────────────────────────────────────
+    String? householdId;
     final local = prefs.getString(_keyHouseholdId);
 
     if (local != null) {
-      // Vérifier que le household stocké appartient à l'utilisateur courant.
-      // Si un autre user AUTHENTIFIÉ s'est connecté (nouvelle session, même
-      // navigateur), les données localStorage du compte précédent seraient
-      // retournées à tort.
-      // IMPORTANT : si user == null (session Supabase en cours de restauration),
-      // on conserve les données locales — pas de purge sur une session indéfinie.
       final storedUserId = prefs.getString(_keyAuthUserId);
-      if (user == null || storedUserId == null || storedUserId == user.id) {
-        // Session en cours de chargement, ou même utilisateur → OK
-        return local;
+      if (storedUserId == null || storedUserId == user.id) {
+        // Même utilisateur (ou première association) → on utilise le local
+        householdId = local;
+      } else {
+        // Autre utilisateur → purger les données stale et interroger Supabase
+        await prefs.remove(_keyHouseholdId);
+        await prefs.remove(_keyAuthUserId);
       }
-      // Autre utilisateur authentifié → purger les données stale
-      await prefs.remove(_keyHouseholdId);
-      await prefs.remove(_keyAuthUserId);
     }
 
-    // Pas de household_id local valide → vérifier dans Supabase
-    if (user == null) return null;
-
-    try {
-      final row = await _client
-          .from('household_auth_devices')
-          .select('household_id')
-          .eq('auth_user_id', user.id)
-          .maybeSingle();
-
-      if (row == null) return null;
-
-      final householdId = row['household_id'] as String;
-      await _persistHouseholdId(householdId);
-
-      // Récupérer code + statut onboarding depuis Supabase.
-      // onboarding_completed est stocké sur le foyer → indépendant du cache navigateur.
+    if (householdId == null) {
+      // Pas de household local → chercher dans Supabase
       try {
-        final householdRow = await _client
-            .from('households')
-            .select('code, onboarding_completed')
-            .eq('id', householdId)
+        final row = await _client
+            .from('household_auth_devices')
+            .select('household_id')
+            .eq('auth_user_id', user.id)
             .maybeSingle();
-        if (householdRow != null) {
-          await prefs.setString(
-              _keyHouseholdCode, householdRow['code'] as String);
-          final onboardingDone =
-              householdRow['onboarding_completed'] as bool? ?? false;
-          await prefs.setBool('onboarding_complete', onboardingDone);
-        }
-      } catch (_) {
-        // Le code/onboarding sera récupéré au prochain accès si nécessaire
+        if (row == null) return null;
+        householdId = row['household_id'] as String;
+        await _persistHouseholdId(householdId);
+
+        // Sync en arrière-plan (données recettes/membres)
+        unawaited(
+          InitialSyncService(_db).syncFromSupabase(householdId).catchError((e) {
+            debugPrint('[HouseholdService] Background sync failed: $e');
+          }),
+        );
+      } catch (e) {
+        debugPrint('[HouseholdService] getCurrentHouseholdId error: $e');
+        return null;
       }
-
-      // Sync en arrière-plan — CRITIQUE : ne pas bloquer le retour du
-      // householdId. Si la sync échoue (réseau, RLS...), l'utilisateur
-      // voit quand même l'app au lieu d'être renvoyé vers la création de foyer.
-      unawaited(
-        InitialSyncService(_db).syncFromSupabase(householdId).catchError((e) {
-          debugPrint('[HouseholdService] Background sync failed: $e');
-        }),
-      );
-
-      return householdId;
-    } catch (e) {
-      debugPrint('[HouseholdService] getCurrentHouseholdId error: $e');
-      return null;
     }
+
+    // ── Toujours synchroniser onboarding_completed depuis Supabase ──────
+    // Source de vérité : la base de données, pas le cache navigateur.
+    // Coût : 1 requête légère à chaque démarrage — garanti fiable.
+    try {
+      final householdRow = await _client
+          .from('households')
+          .select('code, onboarding_completed')
+          .eq('id', householdId)
+          .maybeSingle();
+      if (householdRow != null) {
+        await prefs.setString(_keyHouseholdCode, householdRow['code'] as String);
+        final onboardingDone =
+            householdRow['onboarding_completed'] as bool? ?? false;
+        await prefs.setBool('onboarding_complete', onboardingDone);
+      }
+    } catch (_) {
+      // En cas d'erreur réseau, on conserve l'état local existant
+    }
+
+    return householdId;
   }
 
   /// Marque l'onboarding comme terminé dans Supabase (table households).

@@ -17,6 +17,11 @@ final onboardingNotifierProvider =
 class OnboardingNotifier extends AsyncNotifier<bool> {
   @override
   Future<bool> build() async {
+    // Attendre que le foyer soit chargé : getCurrentHouseholdId() met à jour
+    // SharedPreferences avec onboarding_completed depuis Supabase AVANT de
+    // résoudre. En watchant le foyer ici, on garantit qu'on lit les prefs
+    // après la mise à jour Supabase — pas avant.
+    ref.watch(currentHouseholdIdProvider);
     final service = ref.read(onboardingServiceProvider);
     return service.isComplete();
   }
