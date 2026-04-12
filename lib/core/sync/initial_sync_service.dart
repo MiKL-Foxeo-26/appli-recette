@@ -134,6 +134,10 @@ class InitialSyncService {
       }
     }
     debugPrint('[InitialSync] recipes fetched=${list.length} parsed=${companions.length} skipped=$skipped');
+    final names = list
+        .map((row) => (row as Map<String, dynamic>)['name'])
+        .toList();
+    debugPrint('[InitialSync] recipes names=$names');
     await _insertWithFallback(
       table: _db.recipes,
       companions: companions,
