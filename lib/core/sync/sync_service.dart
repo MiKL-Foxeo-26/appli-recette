@@ -84,12 +84,23 @@ class SyncService {
       final householdId = prefs.getString('household_id');
       if (householdId == null) return;
 
+      final before = await _countLocalRecipes(householdId);
+      log('[SyncService] pull start household=$householdId localRecipes=$before');
       await InitialSyncService(_db).syncFromSupabase(householdId);
-    } catch (e) {
-      log('SyncService pullFromCloud error: $e');
+      final after = await _countLocalRecipes(householdId);
+      log('[SyncService] pull done household=$householdId localRecipes=$after delta=${after - before}');
+    } catch (e, st) {
+      log('[SyncService] pullFromCloud error: $e\n$st');
     } finally {
       _isPulling = false;
     }
+  }
+
+  Future<int> _countLocalRecipes(String householdId) async {
+    final rows = await (_db.select(_db.recipes)
+          ..where((r) => r.householdId.equals(householdId)))
+        .get();
+    return rows.length;
   }
 
   void dispose() {
