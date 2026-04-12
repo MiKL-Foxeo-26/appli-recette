@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:appli_recette/core/database/app_database.dart';
 import 'package:appli_recette/core/sync/sync_queue_datasource.dart';
+import 'package:appli_recette/features/recipes/data/datasources/ingredient_local_datasource.dart';
 import 'package:appli_recette/features/recipes/data/datasources/recipe_local_datasource.dart';
 import 'package:appli_recette/features/recipes/domain/repositories/ingredient_repository.dart';
 import 'package:appli_recette/features/recipes/domain/repositories/recipe_repository.dart';
@@ -12,10 +13,17 @@ import 'package:uuid/uuid.dart';
 /// Implémentation concrète du RecipeRepository.
 /// Délègue au datasource local (drift) et enfile dans la sync_queue.
 class RecipeRepositoryImpl implements RecipeRepository {
-  RecipeRepositoryImpl(this._datasource, this._syncQueue);
+  RecipeRepositoryImpl(
+    this._datasource,
+    this._syncQueue, {
+    IngredientLocalDatasource? ingredientDatasource,
+  }) : _ingredientDatasource = ingredientDatasource;
 
   final RecipeLocalDatasource _datasource;
   final SyncQueueDatasource _syncQueue;
+  // Optionnel pour retro-compat des tests existants. Utilisé uniquement par
+  // updateWithIngredients pour enqueue les deletes/inserts d'ingredients.
+  final IngredientLocalDatasource? _ingredientDatasource;
 
   static const _keyHouseholdId = 'household_id';
 
@@ -170,6 +178,14 @@ class RecipeRepositoryImpl implements RecipeRepository {
     required List<IngredientInput> ingredients,
   }) async {
     final now = DateTime.now();
+    final householdId = await _getHouseholdId();
+
+    // 1. Lister les anciens ingrédients AVANT le replace, pour pouvoir
+    //    enqueue les deletes cloud correspondants.
+    final oldIngredients = _ingredientDatasource == null
+        ? const <Ingredient>[]
+        : await _ingredientDatasource.listForRecipe(id);
+
     final companion = RecipesCompanion(
       id: Value(id),
       name: Value(name),
@@ -186,13 +202,16 @@ class RecipeRepositoryImpl implements RecipeRepository {
       photoPath: Value(photoPath),
       updatedAt: Value(now),
     );
+
+    // 2. Appliquer en drift (transaction atomique : update recette +
+    //    delete old ingredients + insert new).
     await _datasource.updateWithIngredients(
       recipeCompanion: companion,
       recipeId: id,
       ingredients: ingredients,
     );
 
-    final householdId = await _getHouseholdId();
+    // 3. Enqueue l'update de la recette.
     await _syncQueue.enqueue(
       SyncQueueCompanion.insert(
         id: const Uuid().v4(),
@@ -219,6 +238,47 @@ class RecipeRepositoryImpl implements RecipeRepository {
         createdAt: now,
       ),
     );
+
+    // 4. Enqueue les deletes pour chaque ancien ingrédient.
+    for (final old in oldIngredients) {
+      await _syncQueue.enqueue(
+        SyncQueueCompanion.insert(
+          id: const Uuid().v4(),
+          operation: 'delete',
+          entityTable: 'ingredients',
+          recordId: old.id,
+          payload: jsonEncode({'id': old.id}),
+          createdAt: DateTime.now(),
+        ),
+      );
+    }
+
+    // 5. Relire les nouveaux ingrédients post-transaction pour récupérer
+    //    les ids générés par le datasource, et les enqueue comme inserts.
+    if (_ingredientDatasource != null) {
+      final newIngredients = await _ingredientDatasource.listForRecipe(id);
+      for (final ing in newIngredients) {
+        await _syncQueue.enqueue(
+          SyncQueueCompanion.insert(
+            id: const Uuid().v4(),
+            operation: 'insert',
+            entityTable: 'ingredients',
+            recordId: ing.id,
+            payload: jsonEncode({
+              'id': ing.id,
+              'recipe_id': id,
+              'name': ing.name,
+              if (ing.quantity != null) 'quantity': ing.quantity,
+              if (ing.unit != null) 'unit': ing.unit,
+              if (ing.supermarketSection != null)
+                'supermarket_section': ing.supermarketSection,
+              if (householdId != null) 'household_id': householdId,
+            }),
+            createdAt: DateTime.now(),
+          ),
+        );
+      }
+    }
   }
 
   @override

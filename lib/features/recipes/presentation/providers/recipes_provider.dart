@@ -51,7 +51,12 @@ final recipeStepsDatasourceProvider =
 final recipeRepositoryProvider = Provider<RecipeRepository>((ref) {
   final datasource = ref.watch(recipeLocalDatasourceProvider);
   final syncQueue = ref.watch(syncQueueDatasourceProvider);
-  return RecipeRepositoryImpl(datasource, syncQueue);
+  final ingredientDatasource = ref.watch(ingredientLocalDatasourceProvider);
+  return RecipeRepositoryImpl(
+    datasource,
+    syncQueue,
+    ingredientDatasource: ingredientDatasource,
+  );
 });
 
 final ingredientRepositoryProvider = Provider<IngredientRepository>((ref) {
