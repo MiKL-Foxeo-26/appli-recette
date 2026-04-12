@@ -13,7 +13,7 @@ final householdServiceProvider = Provider<HouseholdService>((ref) {
 /// Provider du household_id courant.
 ///
 /// 1. Vérifie SharedPreferences (local).
-/// 2. Si absent, vérifie Supabase household_auth_devices (auto-résolution).
+/// 2. Si absent, vérifie Supabase household_members (auto-résolution).
 ///    Cela évite de redemander "Rejoindre un foyer" sur un nouveau navigateur.
 ///
 /// Dépend de [authStateProvider] pour se ré-évaluer quand la session est prête.

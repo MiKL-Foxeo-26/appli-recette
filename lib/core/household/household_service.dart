@@ -80,13 +80,6 @@ class HouseholdService {
       'role': 'owner',
     });
 
-    // Enregistrer le device pour la RLS (get_my_household_id)
-    await _client.from('household_auth_devices').insert({
-      'household_id': householdId,
-      'auth_user_id': user.id,
-      'joined_at': DateTime.now().toUtc().toIso8601String(),
-    });
-
     await _persistHouseholdId(householdId);
     await linkLocalDataToHousehold(householdId);
 
@@ -135,16 +128,6 @@ class HouseholdService {
       // Déjà membre de ce foyer — on continue
     }
 
-    // Enregistrer le device pour la RLS (get_my_household_id)
-    await _client.from('household_auth_devices').upsert(
-      {
-        'household_id': householdId,
-        'auth_user_id': user.id,
-        'joined_at': DateTime.now().toUtc().toIso8601String(),
-      },
-      onConflict: 'auth_user_id',
-    );
-
     await _persistHouseholdId(householdId);
 
     // Stocker le code localement
@@ -161,7 +144,7 @@ class HouseholdService {
   /// et on repart d'une vérification Supabase propre.
   ///
   /// Si absent localement mais que l'utilisateur est déjà lié à un foyer
-  /// dans Supabase (table household_auth_devices), récupère le household_id,
+  /// dans Supabase (table household_members), récupère le household_id,
   /// le persiste localement, lance la sync initiale, et le retourne.
   /// Cela évite de redemander "Rejoindre un foyer" à chaque nouveau device/navigateur.
   Future<String?> getCurrentHouseholdId() async {
@@ -188,12 +171,13 @@ class HouseholdService {
     }
 
     if (householdId == null) {
-      // Pas de household local → chercher dans Supabase
+      // Pas de household local → chercher dans Supabase via household_members
       try {
         final row = await _client
-            .from('household_auth_devices')
+            .from('household_members')
             .select('household_id')
-            .eq('auth_user_id', user.id)
+            .eq('user_id', user.id)
+            .limit(1)
             .maybeSingle();
         if (row == null) return null;
         householdId = row['household_id'] as String;

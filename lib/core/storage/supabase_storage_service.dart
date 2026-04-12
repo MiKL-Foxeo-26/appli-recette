@@ -26,7 +26,12 @@ class SupabaseStorageService {
             upsert: true,
           ),
         );
-    return _client.storage.from(_bucket).getPublicUrl(path);
+    // Cache-buster : Supabase renvoie la même URL publique pour un même chemin,
+    // ce qui empêche CachedNetworkImage de voir qu'une nouvelle version a été
+    // uploadée. Un query param ?v=timestamp force le rafraîchissement côté client.
+    final url = _client.storage.from(_bucket).getPublicUrl(path);
+    final v = DateTime.now().millisecondsSinceEpoch;
+    return '$url?v=$v';
   }
 
   /// Supprime la photo d'une recette du Storage.
